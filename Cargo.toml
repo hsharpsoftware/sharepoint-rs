@@ -1,0 +1,6 @@
+[package]
+name = "sharepoint"
+version = "0.1.0"
+authors = ["David Podhola <david.podhola@hsharp.software>"]
+
+[dependencies]
