@@ -7,7 +7,7 @@ repository = "https://github.com/hsharpsoftware/sharepoint-rs"
 keywords = ["sharepoint", "office365","odata"]
 gitlab = { repository = "https://github.com/hsharpsoftware/sharepoint-rs", branch = "master" }
 categories = ["web-programming"]
-license = "LGPL"
+license = "LGPL-3.0"
 
 [dependencies]
 futures = "0.1"
