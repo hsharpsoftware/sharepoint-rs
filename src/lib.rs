@@ -360,17 +360,15 @@ mod tests {
                                                 user_name.to_string(),
                                                 password.to_string());
 
-        let access_token_cookies = get_access_token_cookies(host.to_string(),
-                                                                     security_token);
-        let digest = get_the_request_digest(host.to_string(),
-                                            access_token_cookies.clone());
+        let access_token_cookies = get_access_token_cookies(host.to_string(), security_token);
+        let digest = get_the_request_digest(host.to_string(), access_token_cookies.clone());
 
         process(env::var("RUST_LIST_GET_URL").unwrap().to_string(),
-                                                "".to_string(),
-                                                Some(access_token_cookies),
-                                                parse_json,
-                                                true,
-                                                Some(digest),
-                                                Method::Get);
+                "".to_string(),
+                Some(access_token_cookies),
+                parse_json,
+                true,
+                Some(digest),
+                Method::Get);
     }
 }
