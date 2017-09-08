@@ -312,7 +312,7 @@ mod tests {
     }
 
 
-    //#[test]
+    #[test]
     fn json_works() {
         let res = process("https://httpbin.org/post".to_string(),
                           "".to_string(),
@@ -323,7 +323,7 @@ mod tests {
                           Method::Post);
         println!("Got '{:?}'", res);
     }
-    //#[test]
+    #[test]
     fn xml_works() {
         let (user_name, password, host) = login_params();
         let res = get_security_token(host.to_string(),
@@ -331,7 +331,7 @@ mod tests {
                                      password.to_string());
         println!("Got '{:?}'", res);
     }
-    //#[test]
+    #[test]
     fn get_access_token_cookies_works() {
         let (user_name, password, host) = login_params();
         let security_token = get_security_token(host.to_string(),
@@ -341,7 +341,7 @@ mod tests {
         assert!(access_token.rt_fa.is_some());
         assert!(access_token.fed_auth.is_some());
     }
-    //#[test]
+    #[test]
     fn get_the_request_digest_works() {
         let (user_name, password, host) = login_params();
         let security_token = get_security_token(host.to_string(),
