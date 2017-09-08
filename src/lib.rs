@@ -14,13 +14,14 @@ extern crate hyper_tls;
 use std::io::{self, Write};
 use futures::{Future, Stream};
 use tokio_core::reactor::Core;
-use hyper::{Client, Chunk, Method, Request};
-use hyper::header::{ContentLength, ContentType};
+use hyper::{Client, Chunk, Method, Request, Headers};
+use hyper::header::{ContentLength, ContentType, SetCookie};
 use self::futures::{future, Async, Poll};
 use self::futures::task::{self, Task};
 
 
 static GET_SECURITY_TOKEN_URL: &'static str = "https://login.microsoftonline.com/extSTS.srf";
+static GET_ACCESS_TOKEN_URL: &'static str = "https://{host}.sharepoint.com/_forms/default.aspx?wa=wsignin1.0";
 
 static GET_SECURITY_TOKEN_BODY_PAR: &'static str =
 r##"<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
@@ -55,7 +56,13 @@ r##"<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
 </s:Envelope>
         "##;
 
-fn post<'a, T>(url: String, body: String, parser: fn(String) -> Option<T> )  -> Option<T>
+#[derive(Debug, Deserialize, Default)]
+struct HeaderItem {
+    name : String,
+    value : String
+}
+
+fn post<'a, T>(url: String, body: String, parser: fn(String, Vec<HeaderItem>, Vec<String>) -> Option<T> )  -> Option<T>
     where T: serde::Deserialize<'a>
 {
     let mut core = ::tokio_core::reactor::Core::new().unwrap();
@@ -72,14 +79,24 @@ fn post<'a, T>(url: String, body: String, parser: fn(String) -> Option<T> )  -> 
     req.headers_mut().set(ContentLength(body.len() as u64));
 
     let mut result : Option<T> = None;
+    let mut headers : Vec<HeaderItem> = Vec::new();
+    let mut header_cookies : Vec<String> = Vec::new();
     {
         let post = client.request(req).and_then(|res| {
+            headers = res.headers().iter().map( |q| HeaderItem{name:q.name().to_string(), value:q.value_string()} ).collect();
+
+            if let Some (&SetCookie (ref cookies)) = res.headers().get() {
+                for cookie in cookies.iter() {
+                    header_cookies.push(cookie.to_string());
+                }
+            }
+
             res.body().fold(Vec::new(), |mut v, chunk| {
                 v.extend(&chunk[..]);
                 future::ok::<_, hyper::Error>(v)
             }).and_then(|chunks| {
-                let s = String::from_utf8(chunks).unwrap();
-                result = parser(s.to_owned());
+                let s = String::from_utf8(chunks).unwrap();                
+                result = parser(s.to_owned(), headers, header_cookies );
                 future::ok::<_, hyper::Error>(s)
             })
         });    
@@ -130,13 +147,13 @@ struct Envelope {
 
 use serde_json::Value;
 
-fn parse_json( body : String ) -> Option<Value> {
+fn parse_json( body : String, _ : Vec<HeaderItem>, _ : Vec<String> ) -> Option<Value> {
     println!("Parsing '{:?}'", body);        
     let v: Value = serde_json::from_str(&body).unwrap();
     Some(v)
 }
 
-fn parse_xml( body : String ) -> Option<Envelope> {
+fn parse_xml( body : String, _ : Vec<HeaderItem>, _ : Vec<String> ) -> Option<Envelope> {
     println!("Parsing '{:?}'", body);
     let v: Envelope = deserialize(body.as_bytes()).unwrap();
     Some(v)
@@ -146,6 +163,15 @@ pub fn get_security_token( host : String, user_name : String, password : String 
     let s = GET_SECURITY_TOKEN_BODY_PAR.replace("{user_name}", &user_name).replace("{password}", &password).replace("{host}", &host);
     let res : Envelope = post(GET_SECURITY_TOKEN_URL.to_string(), s.to_string(), parse_xml).unwrap();
     res.body.request_security_token_response.requested_security_token.binary_security_token.content
+}
+
+fn parse_cookies( _ : String, _ : Vec<HeaderItem>, cookies : Vec<String> ) -> Option<(Vec<String>)> {
+    Some(cookies)
+}
+
+pub fn get_access_token( host : String, security_token : String ) -> Vec<String> {
+    let res = post(GET_ACCESS_TOKEN_URL.replace("{host}", &host), security_token, parse_cookies).unwrap();
+    res
 }
 
 #[cfg(test)]
@@ -164,5 +190,13 @@ mod tests {
         let host = "";
         let res = get_security_token(host.to_string(), user_name.to_string(),password.to_string() );
         println!("Got '{:?}'", res);
+    }
+    #[test]
+    fn get_access_token_works() {
+        let user_name = "";
+        let password = "";
+        let host = "";
+        let security_token = get_security_token(host.to_string(), user_name.to_string(),password.to_string() );
+        get_access_token( host.to_string(), security_token );
     }
 }
