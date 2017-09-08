@@ -166,10 +166,11 @@ pub fn get_security_token( host : String, user_name : String, password : String 
 }
 
 fn parse_cookies( _ : String, _ : Vec<HeaderItem>, cookies : Vec<String> ) -> Option<(Vec<String>)> {
-    Some(cookies)
+    let res : Vec<String> = cookies.iter().map(|x| x.to_owned() ).filter(|x| x.starts_with("rtFa=") || x.starts_with("FedAuth=")).collect();
+    Some(res)
 }
 
-pub fn get_access_token( host : String, security_token : String ) -> Vec<String> {
+pub fn get_access_token_cookies( host : String, security_token : String ) -> Vec<String> {
     let res = post(GET_ACCESS_TOKEN_URL.replace("{host}", &host), security_token, parse_cookies).unwrap();
     res
 }
@@ -192,11 +193,11 @@ mod tests {
         println!("Got '{:?}'", res);
     }
     #[test]
-    fn get_access_token_works() {
+    fn get_access_token_cookies_works() {
         let user_name = "";
         let password = "";
         let host = "";
         let security_token = get_security_token(host.to_string(), user_name.to_string(),password.to_string() );
-        get_access_token( host.to_string(), security_token );
+        assert_eq!(get_access_token_cookies( host.to_string(), security_token ).len(), 2);
     }
 }
