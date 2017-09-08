@@ -24,8 +24,7 @@ static GET_SECURITY_TOKEN_URL: &'static str = "https://login.microsoftonline.com
 static GET_ACCESS_TOKEN_URL: &'static str = "https://{host}.sharepoint.com/_forms/default.aspx?wa=wsignin1.0";
 static GET_REQUEST_DIGEST_URL: &'static str = "https://{host}.sharepoint.com/_api/contextinfo";
 
-static GET_SECURITY_TOKEN_BODY_PAR: &'static str =
-r##"<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
+static GET_SECURITY_TOKEN_BODY_PAR: &'static str = r##"<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
       xmlns:a="http://www.w3.org/2005/08/addressing"
       xmlns:u="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd">
   <s:Header>
@@ -59,16 +58,20 @@ r##"<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
 
 #[derive(Debug, Deserialize, Default)]
 struct HeaderItem {
-    name : String,
-    value : String
+    name: String,
+    value: String,
 }
 
 pub struct AccessTokenCookies {
-    rtFa : Option<String>,
-    FedAuth : Option<String>
+    rt_fa: Option<String>,
+    fed_auth: Option<String>,
 }
 
-fn post<'a, T>(url: String, body: String, access_token_cookies: Option<AccessTokenCookies>,parser: fn(String, Vec<HeaderItem>, Vec<String>) -> Option<T> )  -> Option<T>
+fn post<'a, T>(url: String,
+               body: String,
+               access_token_cookies: Option<AccessTokenCookies>,
+               parser: fn(String, Vec<HeaderItem>, Vec<String>) -> Option<T>)
+               -> Option<T>
     where T: serde::Deserialize<'a>
 {
     let mut core = ::tokio_core::reactor::Core::new().unwrap();
@@ -84,38 +87,50 @@ fn post<'a, T>(url: String, body: String, access_token_cookies: Option<AccessTok
 
     req.headers_mut().set(ContentType::json());
     req.headers_mut().set(ContentLength(body.len() as u64));
-    if access_token_cookies.is_some() { 
+    if access_token_cookies.is_some() {
         let atc = access_token_cookies.unwrap();
         let mut cookie = Cookie::new();
-        let rt_fa = atc.rtFa.unwrap();
+        let rt_fa = atc.rt_fa.unwrap();
         cookie.append("rtFa", rt_fa.to_owned());
-        cookie.append("FedAuth", atc.FedAuth.unwrap());
+        cookie.append("FedAuth", atc.fed_auth.unwrap());
         println!("rtFa:{}", rt_fa);
         req.headers_mut().set(cookie);
     };
 
-    let mut result : Option<T> = None;
-    let mut headers : Vec<HeaderItem> = Vec::new();
-    let mut header_cookies : Vec<String> = Vec::new();
+    let mut result: Option<T> = None;
+    let mut headers: Vec<HeaderItem> = Vec::new();
+    let mut header_cookies: Vec<String> = Vec::new();
     {
-        let post = client.request(req).and_then(|res| {
-            headers = res.headers().iter().map( |q| HeaderItem{name:q.name().to_string(), value:q.value_string()} ).collect();
+        let post = client
+            .request(req)
+            .and_then(|res| {
+                headers = res.headers()
+                    .iter()
+                    .map(|q| {
+                             HeaderItem {
+                                 name: q.name().to_string(),
+                                 value: q.value_string(),
+                             }
+                         })
+                    .collect();
 
-            if let Some (&SetCookie (ref cookies)) = res.headers().get() {
-                for cookie in cookies.iter() {
-                    header_cookies.push(cookie.to_string());
+                if let Some(&SetCookie(ref cookies)) = res.headers().get() {
+                    for cookie in cookies.iter() {
+                        header_cookies.push(cookie.to_string());
+                    }
                 }
-            }
 
-            res.body().fold(Vec::new(), |mut v, chunk| {
-                v.extend(&chunk[..]);
-                future::ok::<_, hyper::Error>(v)
-            }).and_then(|chunks| {
-                let s = String::from_utf8(chunks).unwrap();                
-                result = parser(s.to_owned(), headers, header_cookies );
-                future::ok::<_, hyper::Error>(s)
-            })
-        });    
+                res.body()
+                    .fold(Vec::new(), |mut v, chunk| {
+                        v.extend(&chunk[..]);
+                        future::ok::<_, hyper::Error>(v)
+                    })
+                    .and_then(|chunks| {
+                                  let s = String::from_utf8(chunks).unwrap();
+                                  result = parser(s.to_owned(), headers, header_cookies);
+                                  future::ok::<_, hyper::Error>(s)
+                              })
+            });
 
         core.run(post).unwrap();
     }
@@ -126,31 +141,30 @@ fn post<'a, T>(url: String, body: String, access_token_cookies: Option<AccessTok
 use serde_xml_rs::deserialize;
 
 #[derive(Debug, Deserialize, Default)]
-struct Header {
-}
+struct Header {}
 
 #[derive(Debug, Deserialize, Default)]
 struct BinarySecurityToken {
-    #[serde(rename="$value")] //see https://stackoverflow.com/a/37972585/2013924
-    content : String
+    #[serde(rename="$value")]
+    content: String,
 }
 
 #[derive(Debug, Deserialize, Default)]
 struct RequestedSecurityToken {
     #[serde(rename = "BinarySecurityToken", default)]
-    binary_security_token : BinarySecurityToken
+    binary_security_token: BinarySecurityToken,
 }
 
 #[derive(Debug, Deserialize, Default)]
 struct RequestSecurityTokenResponse {
     #[serde(rename = "RequestedSecurityToken", default)]
-    requested_security_token : RequestedSecurityToken
+    requested_security_token: RequestedSecurityToken,
 }
 
 #[derive(Debug, Deserialize, Default)]
 struct Body {
     #[serde(rename = "RequestSecurityTokenResponse", default)]
-    request_security_token_response : RequestSecurityTokenResponse
+    request_security_token_response: RequestSecurityTokenResponse,
 }
 
 #[derive(Debug, Deserialize)]
@@ -163,8 +177,8 @@ struct Envelope {
 
 #[derive(Debug, Deserialize, Default)]
 struct FormDigestValue {
-    #[serde(rename="$value")] //see https://stackoverflow.com/a/37972585/2013924
-    content : String
+    #[serde(rename="$value")]
+    content: String,
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -175,54 +189,89 @@ struct GetContextWebInformation {
 
 use serde_json::Value;
 
-fn parse_json( body : String, _ : Vec<HeaderItem>, _ : Vec<String> ) -> Option<Value> {
-    println!("Parsing '{:?}'", body);        
+fn parse_json(body: String, _: Vec<HeaderItem>, _: Vec<String>) -> Option<Value> {
+    println!("Parsing '{:?}'", body);
     let v: Value = serde_json::from_str(&body).unwrap();
     Some(v)
 }
 
-fn parse_xml( body : String, _ : Vec<HeaderItem>, _ : Vec<String> ) -> Option<Envelope> {
+fn parse_xml(body: String, _: Vec<HeaderItem>, _: Vec<String>) -> Option<Envelope> {
     println!("Parsing '{:?}'", body);
     let v: Envelope = deserialize(body.as_bytes()).unwrap();
     Some(v)
 }
 
-pub fn get_security_token( host : String, user_name : String, password : String ) -> String {
-    let s = GET_SECURITY_TOKEN_BODY_PAR.replace("{user_name}", &user_name).replace("{password}", &password).replace("{host}", &host);
-    let res : Envelope = post(GET_SECURITY_TOKEN_URL.to_string(), s.to_string(), None, parse_xml).unwrap();
-    res.body.request_security_token_response.requested_security_token.binary_security_token.content
+pub fn get_security_token(host: String, user_name: String, password: String) -> String {
+    let s = GET_SECURITY_TOKEN_BODY_PAR
+        .replace("{user_name}", &user_name)
+        .replace("{password}", &password)
+        .replace("{host}", &host);
+    let res: Envelope = post(GET_SECURITY_TOKEN_URL.to_string(),
+                             s.to_string(),
+                             None,
+                             parse_xml)
+            .unwrap();
+    res.body
+        .request_security_token_response
+        .requested_security_token
+        .binary_security_token
+        .content
 }
 
-fn parse_cookies( _ : String, _ : Vec<HeaderItem>, cookies : Vec<String> ) -> Option<(Vec<String>)> {
-    let res : Vec<String> = cookies.iter().map(|x| x.to_owned().split(";").next().unwrap().to_string() ).filter(|x| x.starts_with("rtFa=") || x.starts_with("FedAuth=")).collect();
+fn parse_cookies(_: String, _: Vec<HeaderItem>, cookies: Vec<String>) -> Option<(Vec<String>)> {
+    let res: Vec<String> = cookies
+        .iter()
+        .map(|x| x.to_owned().split(";").next().unwrap().to_string())
+        .filter(|x| x.starts_with("rtFa=") || x.starts_with("FedAuth="))
+        .collect();
     Some(res)
 }
 
-pub fn get_access_token_cookies( host : String, security_token : String ) -> AccessTokenCookies {
-    let data = post(GET_ACCESS_TOKEN_URL.replace("{host}", &host), security_token, None, parse_cookies).unwrap();
-    let mut res =  AccessTokenCookies{rtFa:None,FedAuth:None};
+pub fn get_access_token_cookies(host: String, security_token: String) -> AccessTokenCookies {
+    let data = post(GET_ACCESS_TOKEN_URL.replace("{host}", &host),
+                    security_token,
+                    None,
+                    parse_cookies)
+            .unwrap();
+    let mut res = AccessTokenCookies {
+        rt_fa: None,
+        fed_auth: None,
+    };
     for i in data.clone() {
         println!("Cookie:{}", i);
         if i.starts_with("rtFa=") {
             let right = i.split("rtFa=").nth(1).unwrap().to_string();
-            res = AccessTokenCookies{rtFa:Some(right),FedAuth:res.FedAuth};
+            res = AccessTokenCookies {
+                rt_fa: Some(right),
+                fed_auth: res.fed_auth,
+            };
         }
         if i.starts_with("FedAuth=") {
             let right = i.split("FedAuth=").nth(1).unwrap().to_string();
-            res = AccessTokenCookies{rtFa:res.rtFa,FedAuth:Some(right)};
+            res = AccessTokenCookies {
+                rt_fa: res.rt_fa,
+                fed_auth: Some(right),
+            };
         }
-    }    
+    }
     res
 }
 
-fn parse_digest( body : String, _ : Vec<HeaderItem>, _ : Vec<String> ) -> Option<GetContextWebInformation> {
+fn parse_digest(body: String,
+                _: Vec<HeaderItem>,
+                _: Vec<String>)
+                -> Option<GetContextWebInformation> {
     println!("Parsing '{:?}'", body);
     let v: GetContextWebInformation = deserialize(body.as_bytes()).unwrap();
     Some(v)
 }
 
-pub fn get_the_request_digest(host : String, access_token_cookies : AccessTokenCookies) -> String {
-    let res : GetContextWebInformation = post(GET_REQUEST_DIGEST_URL.replace("{host}", &host), "".to_string(), Some(access_token_cookies), parse_digest ).unwrap();
+pub fn get_the_request_digest(host: String, access_token_cookies: AccessTokenCookies) -> String {
+    let res: GetContextWebInformation = post(GET_REQUEST_DIGEST_URL.replace("{host}", &host),
+                                             "".to_string(),
+                                             Some(access_token_cookies),
+                                             parse_digest)
+            .unwrap();
     res.form_digest_value.content
 }
 
@@ -237,7 +286,10 @@ mod tests {
 
     #[test]
     fn json_works() {
-        let res = post("https://httpbin.org/post".to_string(), "".to_string(), None, parse_json);
+        let res = post("https://httpbin.org/post".to_string(),
+                       "".to_string(),
+                       None,
+                       parse_json);
         println!("Got '{:?}'", res);
     }
     #[test]
@@ -245,7 +297,9 @@ mod tests {
         let user_name = LOGIN;
         let password = PASSWORD;
         let host = HOST;
-        let res = get_security_token(host.to_string(), user_name.to_string(),password.to_string() );
+        let res = get_security_token(host.to_string(),
+                                     user_name.to_string(),
+                                     password.to_string());
         println!("Got '{:?}'", res);
     }
     #[test]
@@ -253,19 +307,25 @@ mod tests {
         let user_name = LOGIN;
         let password = PASSWORD;
         let host = HOST;
-        let security_token = get_security_token(host.to_string(), user_name.to_string(),password.to_string() );
-        let access_token = get_access_token_cookies( host.to_string(), security_token );
-        assert!(access_token.rtFa.is_some());
-        assert!(access_token.FedAuth.is_some());
+        let security_token = get_security_token(host.to_string(),
+                                                user_name.to_string(),
+                                                password.to_string());
+        let access_token = get_access_token_cookies(host.to_string(), security_token);
+        assert!(access_token.rt_fa.is_some());
+        assert!(access_token.fed_auth.is_some());
     }
     #[test]
     fn get_the_request_digest_works() {
         let user_name = LOGIN;
         let password = PASSWORD;
         let host = HOST;
-        let security_token = get_security_token(host.to_string(), user_name.to_string(),password.to_string() );
-        let digest = get_the_request_digest(host.to_string(), get_access_token_cookies( host.to_string(), security_token ) );
+        let security_token = get_security_token(host.to_string(),
+                                                user_name.to_string(),
+                                                password.to_string());
+        let digest = get_the_request_digest(host.to_string(),
+                                            get_access_token_cookies(host.to_string(),
+                                                                     security_token));
         println!("Digest '{:?}'", digest);
-        assert!(digest.len()>0);
-    }    
+        assert!(digest.len() > 0);
+    }
 }
