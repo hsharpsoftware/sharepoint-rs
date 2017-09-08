@@ -63,6 +63,7 @@ struct HeaderItem {
     value: String,
 }
 
+#[derive(Clone)]
 pub struct AccessTokenCookies {
     rt_fa: Option<String>,
     fed_auth: Option<String>,
@@ -204,13 +205,13 @@ struct GetContextWebInformation {
 use serde_json::Value;
 
 fn parse_json(body: String, _: Vec<HeaderItem>, _: Vec<String>) -> Option<Value> {
-    println!("Parsing '{:?}'", body);
+    println!("JSON Parsing '{:?}'", body);
     let v: Value = serde_json::from_str(&body).unwrap();
     Some(v)
 }
 
 fn parse_xml(body: String, _: Vec<HeaderItem>, _: Vec<String>) -> Option<Envelope> {
-    println!("Parsing '{:?}'", body);
+    println!("XML Parsing '{:?}'", body);
     let v: Envelope = deserialize(body.as_bytes()).unwrap();
     Some(v)
 }
@@ -311,7 +312,7 @@ mod tests {
     }
 
 
-    #[test]
+    //#[test]
     fn json_works() {
         let res = process("https://httpbin.org/post".to_string(),
                           "".to_string(),
@@ -322,7 +323,7 @@ mod tests {
                           Method::Post);
         println!("Got '{:?}'", res);
     }
-    #[test]
+    //#[test]
     fn xml_works() {
         let (user_name, password, host) = login_params();
         let res = get_security_token(host.to_string(),
@@ -330,7 +331,7 @@ mod tests {
                                      password.to_string());
         println!("Got '{:?}'", res);
     }
-    #[test]
+    //#[test]
     fn get_access_token_cookies_works() {
         let (user_name, password, host) = login_params();
         let security_token = get_security_token(host.to_string(),
@@ -340,7 +341,7 @@ mod tests {
         assert!(access_token.rt_fa.is_some());
         assert!(access_token.fed_auth.is_some());
     }
-    #[test]
+    //#[test]
     fn get_the_request_digest_works() {
         let (user_name, password, host) = login_params();
         let security_token = get_security_token(host.to_string(),
@@ -351,5 +352,25 @@ mod tests {
                                                                      security_token));
         println!("Digest '{:?}'", digest);
         assert!(digest.len() > 0);
+    }
+    #[test]
+    fn get_the_list() {
+        let (user_name, password, host) = login_params();
+        let security_token = get_security_token(host.to_string(),
+                                                user_name.to_string(),
+                                                password.to_string());
+
+        let access_token_cookies = get_access_token_cookies(host.to_string(),
+                                                                     security_token);
+        let digest = get_the_request_digest(host.to_string(),
+                                            access_token_cookies.clone());
+
+        process(env::var("RUST_LIST_GET_URL").unwrap().to_string(),
+                                                "".to_string(),
+                                                Some(access_token_cookies),
+                                                parse_json,
+                                                true,
+                                                Some(digest),
+                                                Method::Get);
     }
 }
