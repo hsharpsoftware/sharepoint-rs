@@ -1,0 +1,20 @@
+[package]
+name = "sharepoint"
+version = "0.1.0"
+authors = ["David Podhola <david.podhola@hsharp.software>"]
+description = "Sharepoint client for Rust"
+repository = "https://github.com/hsharpsoftware/sharepoint-rs"
+keywords = ["sharepoint", "office365"]
+gitlab = { repository = "https://github.com/hsharpsoftware/sharepoint-rs", branch = "master" }
+categories = ["web-programming"]
+license = "LGPL"
+
+[dependencies]
+futures = "0.1"
+hyper = "0.11"
+tokio-core = "0.1"
+serde_derive = "1.0"
+serde = "1.0"
+serde-xml-rs = "0.2.1"
+serde_json = "1.0"
+hyper-tls = "*"
