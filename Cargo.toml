@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["David Podhola <david.podhola@hsharp.software>"]
 description = "Sharepoint client for Rust"
 repository = "https://github.com/hsharpsoftware/sharepoint-rs"
-keywords = ["sharepoint", "office365"]
+keywords = ["sharepoint", "office365","odata"]
 gitlab = { repository = "https://github.com/hsharpsoftware/sharepoint-rs", branch = "master" }
 categories = ["web-programming"]
 license = "LGPL"
