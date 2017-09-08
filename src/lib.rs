@@ -1,4 +1,5 @@
 extern crate futures;
+#[macro_use]
 extern crate hyper;
 extern crate tokio_core;
 
@@ -67,12 +68,16 @@ pub struct AccessTokenCookies {
     fed_auth: Option<String>,
 }
 
-fn post<'a, T>(url: String,
-               body: String,
-               access_token_cookies: Option<AccessTokenCookies>,
-               parser: fn(String, Vec<HeaderItem>, Vec<String>) -> Option<T>,
-               json: bool)
-               -> Option<T>
+header! { (XRequestDigest, "X-RequestDigest") => [String] }
+
+fn process<'a, T>(url: String,
+                  body: String,
+                  access_token_cookies: Option<AccessTokenCookies>,
+                  parser: fn(String, Vec<HeaderItem>, Vec<String>) -> Option<T>,
+                  json: bool,
+                  x_request_digest: Option<String>,
+                  method: Method)
+                  -> Option<T>
     where T: serde::Deserialize<'a>
 {
     let mut core = ::tokio_core::reactor::Core::new().unwrap();
@@ -83,7 +88,7 @@ fn post<'a, T>(url: String,
 
     let uri = url.parse().unwrap();
 
-    let mut req = Request::new(Method::Post, uri);
+    let mut req = Request::new(method, uri);
     req.set_body(body.to_owned());
 
     req.headers_mut().set(ContentType::json());
@@ -100,6 +105,10 @@ fn post<'a, T>(url: String,
     if json {
         req.headers_mut()
             .set(Accept(vec![qitem(mime::APPLICATION_JSON)]));
+    }
+    if x_request_digest.is_some() {
+        req.headers_mut()
+            .set(XRequestDigest(x_request_digest.unwrap().to_owned()));
     }
 
     let mut result: Option<T> = None;
@@ -211,11 +220,13 @@ pub fn get_security_token(host: String, user_name: String, password: String) -> 
         .replace("{user_name}", &user_name)
         .replace("{password}", &password)
         .replace("{host}", &host);
-    let res: Envelope = post(GET_SECURITY_TOKEN_URL.to_string(),
-                             s.to_string(),
-                             None,
-                             parse_xml,
-                             false)
+    let res: Envelope = process(GET_SECURITY_TOKEN_URL.to_string(),
+                                s.to_string(),
+                                None,
+                                parse_xml,
+                                false,
+                                None,
+                                Method::Post)
             .unwrap();
     res.body
         .request_security_token_response
@@ -234,11 +245,13 @@ fn parse_cookies(_: String, _: Vec<HeaderItem>, cookies: Vec<String>) -> Option<
 }
 
 pub fn get_access_token_cookies(host: String, security_token: String) -> AccessTokenCookies {
-    let data = post(GET_ACCESS_TOKEN_URL.replace("{host}", &host),
-                    security_token,
-                    None,
-                    parse_cookies,
-                    false)
+    let data = process(GET_ACCESS_TOKEN_URL.replace("{host}", &host),
+                       security_token,
+                       None,
+                       parse_cookies,
+                       false,
+                       None,
+                       Method::Post)
             .unwrap();
     let mut res = AccessTokenCookies {
         rt_fa: None,
@@ -274,11 +287,13 @@ fn parse_digest(body: String,
 }
 
 pub fn get_the_request_digest(host: String, access_token_cookies: AccessTokenCookies) -> String {
-    let res: GetContextWebInformation = post(GET_REQUEST_DIGEST_URL.replace("{host}", &host),
-                                             "".to_string(),
-                                             Some(access_token_cookies),
-                                             parse_digest,
-                                             false)
+    let res: GetContextWebInformation = process(GET_REQUEST_DIGEST_URL.replace("{host}", &host),
+                                                "".to_string(),
+                                                Some(access_token_cookies),
+                                                parse_digest,
+                                                false,
+                                                None,
+                                                Method::Post)
             .unwrap();
     res.form_digest_value.content
 }
@@ -298,11 +313,13 @@ mod tests {
 
     #[test]
     fn json_works() {
-        let res = post("https://httpbin.org/post".to_string(),
-                       "".to_string(),
-                       None,
-                       parse_json,
-                       true);
+        let res = process("https://httpbin.org/post".to_string(),
+                          "".to_string(),
+                          None,
+                          parse_json,
+                          true,
+                          None,
+                          Method::Post);
         println!("Got '{:?}'", res);
     }
     #[test]
