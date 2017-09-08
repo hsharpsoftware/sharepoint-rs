@@ -18,7 +18,7 @@ use hyper::{Client, Chunk, Method, Request, Headers};
 use hyper::header::{ContentLength, ContentType, SetCookie, Accept, qitem, Cookie};
 use self::futures::{future, Async, Poll};
 use self::futures::task::{self, Task};
-
+use hyper::mime;
 
 static GET_SECURITY_TOKEN_URL: &'static str = "https://login.microsoftonline.com/extSTS.srf";
 static GET_ACCESS_TOKEN_URL: &'static str = "https://{host}.sharepoint.com/_forms/default.aspx?wa=wsignin1.0";
@@ -70,7 +70,8 @@ pub struct AccessTokenCookies {
 fn post<'a, T>(url: String,
                body: String,
                access_token_cookies: Option<AccessTokenCookies>,
-               parser: fn(String, Vec<HeaderItem>, Vec<String>) -> Option<T>)
+               parser: fn(String, Vec<HeaderItem>, Vec<String>) -> Option<T>,
+               json: bool)
                -> Option<T>
     where T: serde::Deserialize<'a>
 {
@@ -96,6 +97,10 @@ fn post<'a, T>(url: String,
         println!("rtFa:{}", rt_fa);
         req.headers_mut().set(cookie);
     };
+    if json {
+        req.headers_mut()
+            .set(Accept(vec![qitem(mime::APPLICATION_JSON)]));
+    }
 
     let mut result: Option<T> = None;
     let mut headers: Vec<HeaderItem> = Vec::new();
@@ -209,7 +214,8 @@ pub fn get_security_token(host: String, user_name: String, password: String) -> 
     let res: Envelope = post(GET_SECURITY_TOKEN_URL.to_string(),
                              s.to_string(),
                              None,
-                             parse_xml)
+                             parse_xml,
+                             false)
             .unwrap();
     res.body
         .request_security_token_response
@@ -231,7 +237,8 @@ pub fn get_access_token_cookies(host: String, security_token: String) -> AccessT
     let data = post(GET_ACCESS_TOKEN_URL.replace("{host}", &host),
                     security_token,
                     None,
-                    parse_cookies)
+                    parse_cookies,
+                    false)
             .unwrap();
     let mut res = AccessTokenCookies {
         rt_fa: None,
@@ -270,7 +277,8 @@ pub fn get_the_request_digest(host: String, access_token_cookies: AccessTokenCoo
     let res: GetContextWebInformation = post(GET_REQUEST_DIGEST_URL.replace("{host}", &host),
                                              "".to_string(),
                                              Some(access_token_cookies),
-                                             parse_digest)
+                                             parse_digest,
+                                             false)
             .unwrap();
     res.form_digest_value.content
 }
@@ -278,10 +286,14 @@ pub fn get_the_request_digest(host: String, access_token_cookies: AccessTokenCoo
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::env;
 
-    static LOGIN: &'static str = "";
-    static PASSWORD: &'static str = "";
-    static HOST: &'static str = "";
+    fn login_params() -> (String, String, String) {
+        let LOGIN = env::var("RUST_USERNAME").unwrap();
+        let PASSWORD = env::var("RUST_PASSWORD").unwrap();
+        let HOST = env::var("RUST_HOST").unwrap();
+        (LOGIN, PASSWORD, HOST)
+    }
 
 
     #[test]
@@ -289,14 +301,13 @@ mod tests {
         let res = post("https://httpbin.org/post".to_string(),
                        "".to_string(),
                        None,
-                       parse_json);
+                       parse_json,
+                       true);
         println!("Got '{:?}'", res);
     }
     #[test]
     fn xml_works() {
-        let user_name = LOGIN;
-        let password = PASSWORD;
-        let host = HOST;
+        let (user_name, password, host) = login_params();
         let res = get_security_token(host.to_string(),
                                      user_name.to_string(),
                                      password.to_string());
@@ -304,9 +315,7 @@ mod tests {
     }
     #[test]
     fn get_access_token_cookies_works() {
-        let user_name = LOGIN;
-        let password = PASSWORD;
-        let host = HOST;
+        let (user_name, password, host) = login_params();
         let security_token = get_security_token(host.to_string(),
                                                 user_name.to_string(),
                                                 password.to_string());
@@ -316,9 +325,7 @@ mod tests {
     }
     #[test]
     fn get_the_request_digest_works() {
-        let user_name = LOGIN;
-        let password = PASSWORD;
-        let host = HOST;
+        let (user_name, password, host) = login_params();
         let security_token = get_security_token(host.to_string(),
                                                 user_name.to_string(),
                                                 password.to_string());
