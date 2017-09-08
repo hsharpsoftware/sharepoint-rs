@@ -2,6 +2,12 @@
 name = "sharepoint"
 version = "0.1.0"
 authors = ["David Podhola <david.podhola@hsharp.software>"]
+description = "Sharepoint client for Rust"
+repository = "https://github.com/hsharpsoftware/sharepoint-rs"
+keywords = ["sharepoint", "office365"]
+gitlab = { repository = "https://github.com/hsharpsoftware/sharepoint-rs", branch = "master" }
+categories = ["web-programming"]
+license = "LGPL"
 
 [dependencies]
 futures = "0.1"
