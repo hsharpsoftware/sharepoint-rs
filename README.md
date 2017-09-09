@@ -1,4 +1,4 @@
-# sharepoint-rs [![Build status](https://ci.appveyor.com/api/projects/status/id1361vojq87g4o6/branch/master?svg=true)](https://ci.appveyor.com/project/davidpodhola/sharepoint-rs/branch/master)
+# sharepoint-rs [![Build status](https://ci.appveyor.com/api/projects/status/id1361vojq87g4o6/branch/master?svg=true)](https://ci.appveyor.com/project/davidpodhola/sharepoint-rs/branch/master) [![Build Status](https://travis-ci.org/hsharpsoftware/sharepoint-rs.svg?branch=master)](https://travis-ci.org/hsharpsoftware/sharepoint-rs)
 Sharepoint client for Rust mainly for [Sharepoint Online](https://products.office.com/en-us/sharepoint/sharepoint-online-collaboration-software) ([Office365](https://www.office.com/)).
 
 Following the [Sharepoint Online Remote Authentication (and doc upload)](http://paulryan.com.au/2014/spo-remote-authentication-rest/), we can now
