@@ -100,7 +100,7 @@ fn process<'a, T>(url: String,
         let rt_fa = atc.rt_fa.unwrap();
         cookie.append("rtFa", rt_fa.to_owned());
         cookie.append("FedAuth", atc.fed_auth.unwrap());
-        println!("rtFa:{}", rt_fa);
+        //println!("rtFa:{}", rt_fa);
         req.headers_mut().set(cookie);
     };
     if json {
@@ -210,8 +210,8 @@ fn parse_json(body: String, _: Vec<HeaderItem>, _: Vec<String>) -> Option<Value>
     Some(v)
 }
 
-fn parse_xml(body: String, _: Vec<HeaderItem>, _: Vec<String>) -> Option<Envelope> {
-    println!("XML Parsing '{:?}'", body);
+fn parse_xml_envelope(body: String, _: Vec<HeaderItem>, _: Vec<String>) -> Option<Envelope> {
+    //println!("XML Parsing '{:?}'", body);
     let v: Envelope = deserialize(body.as_bytes()).unwrap();
     Some(v)
 }
@@ -224,7 +224,7 @@ pub fn get_security_token(host: String, user_name: String, password: String) -> 
     let res: Envelope = process(GET_SECURITY_TOKEN_URL.to_string(),
                                 s.to_string(),
                                 None,
-                                parse_xml,
+                                parse_xml_envelope,
                                 false,
                                 None,
                                 Method::Post)
@@ -259,7 +259,7 @@ pub fn get_access_token_cookies(host: String, security_token: String) -> AccessT
         fed_auth: None,
     };
     for i in data.clone() {
-        println!("Cookie:{}", i);
+        //println!("Cookie:{}", i);
         if i.starts_with("rtFa=") {
             let right = i.split("rtFa=").nth(1).unwrap().to_string();
             res = AccessTokenCookies {
@@ -282,7 +282,7 @@ fn parse_digest(body: String,
                 _: Vec<HeaderItem>,
                 _: Vec<String>)
                 -> Option<GetContextWebInformation> {
-    println!("Parsing '{:?}'", body);
+    //println!("Parsing '{:?}'", body);
     let v: GetContextWebInformation = deserialize(body.as_bytes()).unwrap();
     Some(v)
 }
@@ -321,7 +321,7 @@ mod tests {
                           true,
                           None,
                           Method::Post);
-        println!("Got '{:?}'", res);
+        //println!("Got '{:?}'", res);
     }
     #[test]
     fn xml_works() {
@@ -329,7 +329,7 @@ mod tests {
         let res = get_security_token(host.to_string(),
                                      user_name.to_string(),
                                      password.to_string());
-        println!("Got '{:?}'", res);
+        //println!("Got '{:?}'", res);
     }
     #[test]
     fn get_access_token_cookies_works() {
@@ -350,7 +350,7 @@ mod tests {
         let digest = get_the_request_digest(host.to_string(),
                                             get_access_token_cookies(host.to_string(),
                                                                      security_token));
-        println!("Digest '{:?}'", digest);
+        //println!("Digest '{:?}'", digest);
         assert!(digest.len() > 0);
     }
     #[test]
@@ -362,6 +362,8 @@ mod tests {
 
         let access_token_cookies = get_access_token_cookies(host.to_string(), security_token);
         let digest = get_the_request_digest(host.to_string(), access_token_cookies.clone());
+
+        println!("Trying to get to '{}'", env::var("RUST_LIST_GET_URL").unwrap().to_string());
 
         process(env::var("RUST_LIST_GET_URL").unwrap().to_string(),
                 "".to_string(),
