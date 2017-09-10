@@ -12,6 +12,9 @@ extern crate serde_derive;
 
 extern crate hyper_tls;
 
+extern crate uuid;
+
+use uuid::Uuid;
 use std::io::{self, Write};
 use futures::{Future, Stream};
 use tokio_core::reactor::Core;
@@ -20,10 +23,12 @@ use hyper::header::{ContentLength, ContentType, SetCookie, Accept, qitem, Cookie
 use self::futures::{future, Async, Poll};
 use self::futures::task::{self, Task};
 use hyper::mime;
+use serde::de::DeserializeOwned;
 
 static GET_SECURITY_TOKEN_URL: &'static str = "https://login.microsoftonline.com/extSTS.srf";
 static GET_ACCESS_TOKEN_URL: &'static str = "https://{host}.sharepoint.com/_forms/default.aspx?wa=wsignin1.0";
 static GET_REQUEST_DIGEST_URL: &'static str = "https://{host}.sharepoint.com/_api/contextinfo";
+static GET_LIST_URL: &'static str = "https://{host}.sharepoint.com/_api/web/lists/GetByTitle('{title}')";
 
 static GET_SECURITY_TOKEN_BODY_PAR: &'static str = r##"<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
       xmlns:a="http://www.w3.org/2005/08/addressing"
@@ -202,11 +207,24 @@ struct GetContextWebInformation {
     pub form_digest_value: FormDigestValue,
 }
 
+#[derive(Debug, Deserialize, Default)]
+pub struct List {
+    #[serde(rename = "Id", default)]
+    pub id: Uuid,
+}
+
+
 use serde_json::Value;
 
 fn parse_json(body: String, _: Vec<HeaderItem>, _: Vec<String>) -> Option<Value> {
     println!("JSON Parsing '{:?}'", body);
     let v: Value = serde_json::from_str(&body).unwrap();
+    Some(v)
+}
+
+fn parse_typed_json<T>(body: String, _: Vec<HeaderItem>, _: Vec<String>) -> Option<T> where T: DeserializeOwned {
+    //println!("JSON Parsing '{:?}'", body.to_owned());
+    let v: T = serde_json::from_str(&body).unwrap();
     Some(v)
 }
 
@@ -299,6 +317,24 @@ pub fn get_the_request_digest(host: String, access_token_cookies: AccessTokenCoo
     res.form_digest_value.content
 }
 
+fn get_data<T>(url:String, access_token_cookies: AccessTokenCookies, digest : String ) -> Option<T> where T: DeserializeOwned {
+    process(url,
+            "".to_string(),
+            Some(access_token_cookies),
+            parse_typed_json,
+            true,
+            Some(digest),
+            Method::Get)
+}
+
+pub fn get_list_by_title(title:String, access_token_cookies: AccessTokenCookies, digest : String, host:String ) -> Option<List> {
+    get_data(GET_LIST_URL
+                .replace("{title}", &title)
+                .replace("{host}", &host),
+            access_token_cookies,
+            digest)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -372,5 +408,19 @@ mod tests {
                 true,
                 Some(digest),
                 Method::Get);
+    }
+    #[test]
+    fn get_list_by_title_works() {
+        let (user_name, password, host) = login_params();
+        let security_token = get_security_token(host.to_string(),
+                                                user_name.to_string(),
+                                                password.to_string());
+
+        let access_token_cookies = get_access_token_cookies(host.to_string(), security_token);
+        let digest = get_the_request_digest(host.to_string(), access_token_cookies.clone());
+        let title = env::var("RUST_TITLE").unwrap().to_string();
+
+        let list = get_list_by_title(title, access_token_cookies, digest, host).unwrap();
+        println!("ID: {}", list.id);
     }
 }
