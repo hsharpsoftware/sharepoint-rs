@@ -57,9 +57,11 @@ where
         let atc = access_token_cookies.unwrap();
         let mut cookie = Cookie::new();
         let rt_fa = atc.rt_fa.unwrap();
+        let fed_auth = atc.fed_auth.unwrap();
         cookie.append("rtFa", rt_fa.to_owned());
-        cookie.append("FedAuth", atc.fed_auth.unwrap());
-        //println!("rtFa:{}", rt_fa);
+        cookie.append("FedAuth", fed_auth.to_owned() );
+        println!("rtFa:{}", rt_fa);
+        println!("FedAuth:{}", fed_auth);
         req.headers_mut().set(cookie);
     };
     if json {
@@ -68,12 +70,14 @@ where
         );
     }
     if x_request_digest.is_some() {
-        req.headers_mut().set(XRequestDigest(
-            x_request_digest
+        let digest = x_request_digest
                 .unwrap()
-                .content
-                .to_owned(),
+                .content;
+
+        req.headers_mut().set(XRequestDigest(
+                digest.to_owned(),
         ));
+        println!("digest:{}", digest);
     }
 
     let mut result: Option<T> = None;
@@ -160,7 +164,7 @@ where
     let mut v: Value = serde_json::from_str(&body).unwrap();
     v["__metadata"] = json!({ "type": list_item_type } );
 
-    println!("Will send '{}'", v.to_string().to_owned());
+    println!("Will send '{}' to {}", v.to_string().to_owned(), url);
 
     process(
         url,
