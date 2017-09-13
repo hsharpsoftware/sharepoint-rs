@@ -8,3 +8,14 @@ Following the [Sharepoint Online Remote Authentication (and doc upload)](http://
 
 Now the main efford will be to somehow follow the structure of [PnP JavaScript Core component](https://github.com/SharePoint/PnP-JS-Core)
 we [successfully used with F# and Fable before](https://github.com/hsharpsoftware/fable-import-sp-pnp-js).
+
+## Tests
+To make the tests working you have to set few environment variables. If setting them in `.profile` make sure all the special characters are saved correctly.
+
+```
+export RUST_USERNAME=user@company.onmicrosoft.com
+export RUST_PASSWORD=123456
+export RUST_LIST_GET_URL="https://company.sharepoint.com/sites/eon/gw_GPP/_api/web/lists/getbytitle('TestColumn')"
+export RUST_TITLE=TestColumn
+export RUST_SITE=https://company.sharepoint.com/sites/eon/gw_GPP/
+```
