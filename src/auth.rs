@@ -1,15 +1,11 @@
-extern crate serde;
-extern crate serde_json;
 extern crate serde_xml_rs;
 
-extern crate hyper_tls;
-
+#[allow(unused_imports)]
 use super::*;
+
 use data::*;
 
-use hyper::{Method, Request};
-use hyper::header::{ContentLength, ContentType, SetCookie, Accept, qitem, Cookie};
-use self::serde::de::DeserializeOwned;
+use hyper::{Method};
 
 static GET_SECURITY_TOKEN_URL: &'static str = "https://login.microsoftonline.com/extSTS.srf";
 static GET_ACCESS_TOKEN_URL: &'static str = "https://{host}.sharepoint.com/_forms/default.aspx?wa=wsignin1.0";

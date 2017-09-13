@@ -1,12 +1,9 @@
-extern crate uuid;
-
 extern crate serde;
 extern crate tokio_core;
 extern crate hyper_tls;
 
 extern crate futures;
 
-use self::uuid::Uuid;
 use auth::*;
 use self::futures::{future};
 
