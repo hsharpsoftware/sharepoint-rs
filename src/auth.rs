@@ -5,7 +5,7 @@ use super::*;
 
 use data::*;
 
-use hyper::{Method};
+use hyper::Method;
 
 static GET_SECURITY_TOKEN_URL: &'static str = "https://login.microsoftonline.com/extSTS.srf";
 static GET_ACCESS_TOKEN_URL: &'static str = "https://{host}.sharepoint.com/_forms/default.aspx?wa=wsignin1.0";
@@ -51,7 +51,7 @@ pub struct AccessTokenCookies {
 }
 
 pub struct RequestDigest {
-    pub content : String
+    pub content: String,
 }
 
 use self::serde_xml_rs::deserialize;
@@ -183,7 +183,10 @@ fn parse_digest(
     Some(v)
 }
 
-pub fn get_the_request_digest(host: String, access_token_cookies: AccessTokenCookies) -> RequestDigest {
+pub fn get_the_request_digest(
+    host: String,
+    access_token_cookies: AccessTokenCookies,
+) -> RequestDigest {
     let res: GetContextWebInformation = process(
         GET_REQUEST_DIGEST_URL.replace("{host}", &host),
         "".to_string(),
@@ -193,7 +196,7 @@ pub fn get_the_request_digest(host: String, access_token_cookies: AccessTokenCoo
         None,
         Method::Post,
     ).unwrap();
-    RequestDigest{content:res.form_digest_value.content}
+    RequestDigest { content: res.form_digest_value.content }
 }
 
 

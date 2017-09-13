@@ -5,7 +5,7 @@ extern crate hyper_tls;
 extern crate futures;
 
 use auth::*;
-use self::futures::{future};
+use self::futures::future;
 
 use hyper::{Method, Request};
 
@@ -68,7 +68,10 @@ where
     }
     if x_request_digest.is_some() {
         req.headers_mut().set(XRequestDigest(
-            x_request_digest.unwrap().content.to_owned(),
+            x_request_digest
+                .unwrap()
+                .content
+                .to_owned(),
         ));
     }
 

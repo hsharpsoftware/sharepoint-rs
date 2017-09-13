@@ -19,8 +19,7 @@ pub struct List {
 
 
 #[derive(Debug, Deserialize, Default)]
-struct ListItemsContainer<T> 
-{
+struct ListItemsContainer<T> {
     #[serde(rename = "value", default)]
     results: Vec<T>,
 }
@@ -49,19 +48,18 @@ pub fn get_list_items_by_title<T>(
     access_token_cookies: AccessTokenCookies,
     digest: RequestDigest,
     host: String,
-) -> Vec<T> 
+) -> Vec<T>
 where
-    T: DeserializeOwned + Default
+    T: DeserializeOwned + Default,
 {
-    let res : Option<ListItemsContainer<T>> = get_data(
-        GET_LIST_ITEMS_URL.replace("{title}", &title).replace(
-            "{host}",
-            &host,
-        ),
+    let res: Option<ListItemsContainer<T>> = get_data(
+        GET_LIST_ITEMS_URL
+            .replace("{title}", &title)
+            .replace("{host}", &host),
         access_token_cookies,
         digest,
     );
-    //println!("res: '{:?}'", res);    
+    //println!("res: '{:?}'", res);
     res.unwrap().results
 }
 
@@ -89,8 +87,8 @@ mod tests {
 
     #[derive(Debug, Deserialize, Default)]
     struct GenericListItem {
-        #[serde(rename = "Id", default)]        
-        id : i32,
+        #[serde(rename = "Id", default)]
+        id: i32,
     }
 
     #[test]
@@ -106,10 +104,11 @@ mod tests {
         let digest = get_the_request_digest(host.to_string(), access_token_cookies.clone());
         let title = env::var("RUST_TITLE").unwrap().to_string();
 
-        let items : Vec<GenericListItem> = get_list_items_by_title(title, access_token_cookies, digest, host);
+        let items: Vec<GenericListItem> =
+            get_list_items_by_title(title, access_token_cookies, digest, host);
 
         println!("items: '{:?}'", items);
 
-        assert!( items.len() > 0 );
+        assert!(items.len() > 0);
     }
 }
