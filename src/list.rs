@@ -43,6 +43,15 @@ pub fn get_list_by_title(
     )
 }
 
+pub fn get_list_default_item_type( list_name : String ) -> String {
+    let mut v: Vec<char> = list_name.chars().collect();
+    v[0] = v[0].to_uppercase().nth(0).unwrap();
+    let s2: String = v.into_iter().collect();
+
+    format!("{}{}{}", "SP.Data.", s2, "ListItem" )
+}
+
+
 pub fn get_list_items_by_title<T>(
     title: String,
     access_token_cookies: AccessTokenCookies,
@@ -61,6 +70,12 @@ where
     );
     //println!("res: '{:?}'", res);
     res.unwrap().results
+}
+
+pub fn add_list_item_by_list_title(
+
+) {
+    
 }
 
 #[cfg(test)]

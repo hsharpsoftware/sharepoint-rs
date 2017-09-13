@@ -12,7 +12,8 @@ use hyper::{Method, Request};
 #[allow(unused_imports)]
 use super::*;
 
-use self::serde::de::DeserializeOwned;
+use self::serde::de::{DeserializeOwned };
+use self::serde::ser::Serialize;
 use hyper::header::{ContentLength, ContentType, SetCookie, Accept, qitem, Cookie};
 use hyper::mime;
 use self::futures::{Future, Stream};
@@ -139,5 +140,28 @@ where
         true,
         Some(digest),
         Method::Get,
+    )
+}
+
+pub fn post_data<T>(
+    url: String,
+    access_token_cookies: AccessTokenCookies,
+    digest: RequestDigest,
+    data : T,
+    list_item_type : String,
+) -> Option<T>
+where
+    T: DeserializeOwned + Serialize
+{
+    let body = serde_json::to_string(&data).unwrap();
+
+    process(
+        url,
+        body,
+        Some(access_token_cookies),
+        parse_typed_json,
+        true,
+        Some(digest),
+        Method::Post,
     )
 }
