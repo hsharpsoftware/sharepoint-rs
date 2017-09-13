@@ -51,7 +51,7 @@ pub fn get_list_items_by_title<T>(
     host: String,
 ) -> Vec<T> 
 where
-    T: DeserializeOwned + Default + std::fmt::Debug,
+    T: DeserializeOwned + Default
 {
     let res : Option<ListItemsContainer<T>> = get_data(
         GET_LIST_ITEMS_URL.replace("{title}", &title).replace(
@@ -61,7 +61,7 @@ where
         access_token_cookies,
         digest,
     );
-    println!("res: '{:?}'", res);    
+    //println!("res: '{:?}'", res);    
     res.unwrap().results
 }
 
