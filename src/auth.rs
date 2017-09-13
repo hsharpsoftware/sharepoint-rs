@@ -9,12 +9,10 @@ extern crate hyper_tls;
 
 use super::*;
 
-use std::io::{self, Write};
 use self::futures::{Future, Stream};
-use hyper::{Client, Chunk, Method, Request, Headers};
+use hyper::{Method, Request};
 use hyper::header::{ContentLength, ContentType, SetCookie, Accept, qitem, Cookie};
-use self::futures::{future, Async, Poll};
-use self::futures::task::{self, Task};
+use self::futures::{future};
 use hyper::mime;
 use self::serde::de::DeserializeOwned;
 
@@ -204,8 +202,6 @@ struct GetContextWebInformation {
     pub form_digest_value: FormDigestValue,
 }
 
-use self::serde_json::Value;
-
 fn parse_typed_json<T>(body: String, _: Vec<HeaderItem>, _: Vec<String>) -> Option<T>
 where
     T: DeserializeOwned,
@@ -338,6 +334,8 @@ pub mod tests {
         let host = env::var("RUST_HOST").unwrap();
         (login, password, host)
     }
+
+    use self::serde_json::Value;
 
     fn parse_json(body: String, _: Vec<HeaderItem>, _: Vec<String>) -> Option<Value> {
         println!("JSON Parsing '{:?}'", body);

@@ -1,8 +1,10 @@
 extern crate uuid;
 
-use super::*;
 use self::uuid::Uuid;
 use auth::*;
+
+#[allow(unused_imports)]
+use super::*;
 
 #[derive(Debug, Deserialize, Default)]
 pub struct List {
