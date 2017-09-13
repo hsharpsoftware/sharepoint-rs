@@ -1,6 +1,3 @@
-extern crate futures;
-extern crate tokio_core;
-
 extern crate serde;
 extern crate serde_json;
 extern crate serde_xml_rs;
@@ -8,18 +5,15 @@ extern crate serde_xml_rs;
 extern crate hyper_tls;
 
 use super::*;
+use data::*;
 
-use self::futures::{Future, Stream};
 use hyper::{Method, Request};
 use hyper::header::{ContentLength, ContentType, SetCookie, Accept, qitem, Cookie};
-use self::futures::{future};
-use hyper::mime;
 use self::serde::de::DeserializeOwned;
 
 static GET_SECURITY_TOKEN_URL: &'static str = "https://login.microsoftonline.com/extSTS.srf";
 static GET_ACCESS_TOKEN_URL: &'static str = "https://{host}.sharepoint.com/_forms/default.aspx?wa=wsignin1.0";
 static GET_REQUEST_DIGEST_URL: &'static str = "https://{host}.sharepoint.com/_api/contextinfo";
-pub static GET_LIST_URL: &'static str = "https://{host}.sharepoint.com/_api/web/lists/GetByTitle('{title}')";
 
 static GET_SECURITY_TOKEN_BODY_PAR: &'static str = r##"<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
       xmlns:a="http://www.w3.org/2005/08/addressing"
@@ -53,105 +47,13 @@ static GET_SECURITY_TOKEN_BODY_PAR: &'static str = r##"<s:Envelope xmlns:s="http
 </s:Envelope>
         "##;
 
-#[derive(Debug, Deserialize, Default)]
-struct HeaderItem {
-    name: String,
-    value: String,
-}
 
 #[derive(Clone)]
 pub struct AccessTokenCookies {
-    rt_fa: Option<String>,
-    fed_auth: Option<String>,
+    pub rt_fa: Option<String>,
+    pub fed_auth: Option<String>,
 }
 
-header! { (XRequestDigest, "X-RequestDigest") => [String] }
-
-fn process<'a, T>(
-    url: String,
-    body: String,
-    access_token_cookies: Option<AccessTokenCookies>,
-    parser: fn(String, Vec<HeaderItem>, Vec<String>) -> Option<T>,
-    json: bool,
-    x_request_digest: Option<String>,
-    method: Method,
-) -> Option<T>
-where
-    T: serde::Deserialize<'a>,
-{
-    let mut core = auth::tokio_core::reactor::Core::new().unwrap();
-
-    let client = ::hyper::Client::configure()
-        .connector(
-            auth::hyper_tls::HttpsConnector::new(4, &core.handle()).unwrap(),
-        )
-        .build(&core.handle());
-
-    let uri = url.parse().unwrap();
-
-    let mut req = Request::new(method, uri);
-    req.set_body(body.to_owned());
-
-    req.headers_mut().set(ContentType::json());
-    req.headers_mut().set(ContentLength(body.len() as u64));
-    if access_token_cookies.is_some() {
-        let atc = access_token_cookies.unwrap();
-        let mut cookie = Cookie::new();
-        let rt_fa = atc.rt_fa.unwrap();
-        cookie.append("rtFa", rt_fa.to_owned());
-        cookie.append("FedAuth", atc.fed_auth.unwrap());
-        //println!("rtFa:{}", rt_fa);
-        req.headers_mut().set(cookie);
-    };
-    if json {
-        req.headers_mut().set(
-            Accept(vec![qitem(mime::APPLICATION_JSON)]),
-        );
-    }
-    if x_request_digest.is_some() {
-        req.headers_mut().set(XRequestDigest(
-            x_request_digest.unwrap().to_owned(),
-        ));
-    }
-
-    let mut result: Option<T> = None;
-    let mut headers: Vec<HeaderItem> = Vec::new();
-    let mut header_cookies: Vec<String> = Vec::new();
-    {
-        let post = client.request(req).and_then(|res| {
-            headers = res.headers()
-                .iter()
-                .map(|q| {
-                    HeaderItem {
-                        name: q.name().to_string(),
-                        value: q.value_string(),
-                    }
-                })
-                .collect();
-
-            if let Some(&SetCookie(ref cookies)) = res.headers().get() {
-                for cookie in cookies.iter() {
-                    header_cookies.push(cookie.to_string());
-                }
-            }
-
-            res.body()
-                .fold(Vec::new(), |mut v, chunk| {
-                    v.extend(&chunk[..]);
-                    future::ok::<_, hyper::Error>(v)
-                })
-                .and_then(|chunks| {
-                    let s = String::from_utf8(chunks).unwrap();
-                    result = parser(s.to_owned(), headers, header_cookies);
-                    future::ok::<_, hyper::Error>(s)
-                })
-        });
-
-        core.run(post).unwrap();
-    }
-
-    result
-}
 
 use self::serde_xml_rs::deserialize;
 
@@ -200,15 +102,6 @@ struct FormDigestValue {
 struct GetContextWebInformation {
     #[serde(rename = "FormDigestValue", default)]
     pub form_digest_value: FormDigestValue,
-}
-
-fn parse_typed_json<T>(body: String, _: Vec<HeaderItem>, _: Vec<String>) -> Option<T>
-where
-    T: DeserializeOwned,
-{
-    //println!("JSON Parsing '{:?}'", body.to_owned());
-    let v: T = serde_json::from_str(&body).unwrap();
-    Some(v)
 }
 
 fn parse_xml_envelope(body: String, _: Vec<HeaderItem>, _: Vec<String>) -> Option<Envelope> {
@@ -304,24 +197,6 @@ pub fn get_the_request_digest(host: String, access_token_cookies: AccessTokenCoo
     res.form_digest_value.content
 }
 
-pub fn get_data<T>(
-    url: String,
-    access_token_cookies: AccessTokenCookies,
-    digest: String,
-) -> Option<T>
-where
-    T: DeserializeOwned,
-{
-    process(
-        url,
-        "".to_string(),
-        Some(access_token_cookies),
-        parse_typed_json,
-        true,
-        Some(digest),
-        Method::Get,
-    )
-}
 
 #[cfg(test)]
 pub mod tests {
