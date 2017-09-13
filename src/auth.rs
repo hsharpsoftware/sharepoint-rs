@@ -7,14 +7,10 @@ extern crate serde_xml_rs;
 
 extern crate hyper_tls;
 
-extern crate uuid;
-
 use super::*;
 
-use self::uuid::Uuid;
 use std::io::{self, Write};
 use self::futures::{Future, Stream};
-use self::tokio_core::reactor::Core;
 use hyper::{Client, Chunk, Method, Request, Headers};
 use hyper::header::{ContentLength, ContentType, SetCookie, Accept, qitem, Cookie};
 use self::futures::{future, Async, Poll};
@@ -210,12 +206,6 @@ struct GetContextWebInformation {
 
 use self::serde_json::Value;
 
-fn parse_json(body: String, _: Vec<HeaderItem>, _: Vec<String>) -> Option<Value> {
-    println!("JSON Parsing '{:?}'", body);
-    let v: Value = serde_json::from_str(&body).unwrap();
-    Some(v)
-}
-
 fn parse_typed_json<T>(body: String, _: Vec<HeaderItem>, _: Vec<String>) -> Option<T>
 where
     T: DeserializeOwned,
@@ -343,16 +333,21 @@ pub mod tests {
     use std::env;
 
     pub fn login_params() -> (String, String, String) {
-        let LOGIN = env::var("RUST_USERNAME").unwrap();
-        let PASSWORD = env::var("RUST_PASSWORD").unwrap();
-        let HOST = env::var("RUST_HOST").unwrap();
-        (LOGIN, PASSWORD, HOST)
+        let login = env::var("RUST_USERNAME").unwrap();
+        let password = env::var("RUST_PASSWORD").unwrap();
+        let host = env::var("RUST_HOST").unwrap();
+        (login, password, host)
     }
 
+    fn parse_json(body: String, _: Vec<HeaderItem>, _: Vec<String>) -> Option<Value> {
+        println!("JSON Parsing '{:?}'", body);
+        let v: Value = serde_json::from_str(&body).unwrap();
+        Some(v)
+    }
 
     #[test]
     fn json_works() {
-        let res = process(
+        let _res = process(
             "https://httpbin.org/post".to_string(),
             "".to_string(),
             None,
@@ -361,17 +356,17 @@ pub mod tests {
             None,
             Method::Post,
         );
-        //println!("Got '{:?}'", res);
+        //println!("Got '{:?}'", _res);
     }
     #[test]
     fn xml_works() {
         let (user_name, password, host) = login_params();
-        let res = get_security_token(
+        let _res = get_security_token(
             host.to_string(),
             user_name.to_string(),
             password.to_string(),
         );
-        //println!("Got '{:?}'", res);
+        //println!("Got '{:?}'", _res);
     }
     #[test]
     fn get_access_token_cookies_works() {
