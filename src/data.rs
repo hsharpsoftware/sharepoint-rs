@@ -143,6 +143,8 @@ where
     )
 }
 
+use self::serde_json::Value;
+
 pub fn post_data<T>(
     url: String,
     access_token_cookies: AccessTokenCookies,
@@ -155,9 +157,12 @@ where
 {
     let body = serde_json::to_string(&data).unwrap();
 
+    let mut v: Value = serde_json::from_str(&body).unwrap();
+    v["__metadata"] = json!({ "type": list_item_type } );
+
     process(
         url,
-        body,
+        v.to_string(),
         Some(access_token_cookies),
         parse_typed_json,
         true,
