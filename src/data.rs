@@ -34,7 +34,7 @@ pub fn process<'a, T>(
     access_token_cookies: Option<AccessTokenCookies>,
     parser: fn(String, Vec<HeaderItem>, Vec<String>) -> Option<T>,
     json: bool,
-    x_request_digest: Option<String>,
+    x_request_digest: Option<RequestDigest>,
     method: Method,
 ) -> Option<T>
 where
@@ -71,7 +71,7 @@ where
     }
     if x_request_digest.is_some() {
         req.headers_mut().set(XRequestDigest(
-            x_request_digest.unwrap().to_owned(),
+            x_request_digest.unwrap().content.to_owned(),
         ));
     }
 
@@ -126,7 +126,7 @@ where
 pub fn get_data<T>(
     url: String,
     access_token_cookies: AccessTokenCookies,
-    digest: String,
+    digest: RequestDigest,
 ) -> Option<T>
 where
     T: DeserializeOwned,

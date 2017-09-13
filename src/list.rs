@@ -31,7 +31,7 @@ static GET_LIST_ITEMS_URL: &'static str = "https://{host}.sharepoint.com/_api/we
 pub fn get_list_by_title(
     title: String,
     access_token_cookies: AccessTokenCookies,
-    digest: String,
+    digest: RequestDigest,
     host: String,
 ) -> Option<List> {
     get_data(
@@ -47,7 +47,7 @@ pub fn get_list_by_title(
 pub fn get_list_items_by_title<T>(
     title: String,
     access_token_cookies: AccessTokenCookies,
-    digest: String,
+    digest: RequestDigest,
     host: String,
 ) -> Vec<T> 
 where
@@ -88,7 +88,7 @@ mod tests {
     }
 
     #[derive(Debug, Deserialize, Default)]
-    struct Generic_Item {
+    struct GenericListItem {
         #[serde(rename = "Id", default)]        
         id : i32,
     }
@@ -106,7 +106,7 @@ mod tests {
         let digest = get_the_request_digest(host.to_string(), access_token_cookies.clone());
         let title = env::var("RUST_TITLE").unwrap().to_string();
 
-        let items : Vec<Generic_Item> = get_list_items_by_title(title, access_token_cookies, digest, host);
+        let items : Vec<GenericListItem> = get_list_items_by_title(title, access_token_cookies, digest, host);
 
         println!("items: '{:?}'", items);
 

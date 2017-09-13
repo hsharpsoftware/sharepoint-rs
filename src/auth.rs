@@ -54,6 +54,9 @@ pub struct AccessTokenCookies {
     pub fed_auth: Option<String>,
 }
 
+pub struct RequestDigest {
+    pub content : String
+}
 
 use self::serde_xml_rs::deserialize;
 
@@ -184,7 +187,7 @@ fn parse_digest(
     Some(v)
 }
 
-pub fn get_the_request_digest(host: String, access_token_cookies: AccessTokenCookies) -> String {
+pub fn get_the_request_digest(host: String, access_token_cookies: AccessTokenCookies) -> RequestDigest {
     let res: GetContextWebInformation = process(
         GET_REQUEST_DIGEST_URL.replace("{host}", &host),
         "".to_string(),
@@ -194,7 +197,7 @@ pub fn get_the_request_digest(host: String, access_token_cookies: AccessTokenCoo
         None,
         Method::Post,
     ).unwrap();
-    res.form_digest_value.content
+    RequestDigest{content:res.form_digest_value.content}
 }
 
 
@@ -266,7 +269,7 @@ pub mod tests {
             get_access_token_cookies(host.to_string(), security_token),
         );
         //println!("Digest '{:?}'", digest);
-        assert!(digest.len() > 0);
+        assert!(digest.content.len() > 0);
     }
     #[test]
     fn get_the_list() {
