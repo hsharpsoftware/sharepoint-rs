@@ -12,3 +12,8 @@ mod data;
 
 pub mod auth;
 pub mod list;
+
+#[derive(Debug, Clone)]
+pub struct Site {
+    pub parent: String,
+}

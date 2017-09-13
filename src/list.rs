@@ -24,19 +24,19 @@ struct ListItemsContainer<T> {
     results: Vec<T>,
 }
 
-static GET_LIST_URL: &'static str = "https://{host}.sharepoint.com/_api/web/lists/GetByTitle('{title}')";
-static GET_LIST_ITEMS_URL: &'static str = "https://{host}.sharepoint.com/_api/web/lists/GetByTitle('{title}')/items";
+static GET_LIST_URL: &'static str = "{site}/_api/web/lists/GetByTitle('{title}')";
+static GET_LIST_ITEMS_URL: &'static str = "{site}/_api/web/lists/GetByTitle('{title}')/items";
 
 pub fn get_list_by_title(
     title: String,
     access_token_cookies: AccessTokenCookies,
     digest: RequestDigest,
-    host: String,
+    site: Site,
 ) -> Option<List> {
     get_data(
         GET_LIST_URL.replace("{title}", &title).replace(
-            "{host}",
-            &host,
+            "{site}",
+            site.parent.to_string().as_str(),
         ),
         access_token_cookies,
         digest,
@@ -56,7 +56,7 @@ pub fn get_list_items_by_title<T>(
     title: String,
     access_token_cookies: AccessTokenCookies,
     digest: RequestDigest,
-    host: String,
+    site: Site,
 ) -> Vec<T>
 where
     T: DeserializeOwned + Default,
@@ -64,7 +64,7 @@ where
     let res: Option<ListItemsContainer<T>> = get_data(
         GET_LIST_ITEMS_URL
             .replace("{title}", &title)
-            .replace("{host}", &host),
+            .replace("{site}", site.parent.to_string().as_str()),
         access_token_cookies,
         digest,
     );
@@ -85,18 +85,18 @@ mod tests {
 
     #[test]
     fn get_list_by_title_works() {
-        let (user_name, password, host) = auth::tests::login_params();
+        let (user_name, password, site) = auth::tests::login_params();
         let security_token = get_security_token(
-            host.to_string(),
+            site.clone(),
             user_name.to_string(),
             password.to_string(),
         );
 
-        let access_token_cookies = get_access_token_cookies(host.to_string(), security_token);
-        let digest = get_the_request_digest(host.to_string(), access_token_cookies.clone());
+        let access_token_cookies = get_access_token_cookies(site.clone(), security_token);
+        let digest = get_the_request_digest(site.clone(), access_token_cookies.clone());
         let title = env::var("RUST_TITLE").unwrap().to_string();
 
-        let list = get_list_by_title(title, access_token_cookies, digest, host).unwrap();
+        let list = get_list_by_title(title, access_token_cookies, digest, site).unwrap();
         println!("ID: {}", list.id);
     }
 
@@ -108,19 +108,19 @@ mod tests {
 
     #[test]
     fn get_list_items_by_title_works() {
-        let (user_name, password, host) = auth::tests::login_params();
+        let (user_name, password, site) = auth::tests::login_params();
         let security_token = get_security_token(
-            host.to_string(),
+            site.clone(),
             user_name.to_string(),
             password.to_string(),
         );
 
-        let access_token_cookies = get_access_token_cookies(host.to_string(), security_token);
-        let digest = get_the_request_digest(host.to_string(), access_token_cookies.clone());
+        let access_token_cookies = get_access_token_cookies(site.clone(), security_token);
+        let digest = get_the_request_digest(site.clone(), access_token_cookies.clone());
         let title = env::var("RUST_TITLE").unwrap().to_string();
 
         let items: Vec<GenericListItem> =
-            get_list_items_by_title(title, access_token_cookies, digest, host);
+            get_list_items_by_title(title, access_token_cookies, digest, site);
 
         println!("items: '{:?}'", items);
 

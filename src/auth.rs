@@ -8,8 +8,8 @@ use data::*;
 use hyper::Method;
 
 static GET_SECURITY_TOKEN_URL: &'static str = "https://login.microsoftonline.com/extSTS.srf";
-static GET_ACCESS_TOKEN_URL: &'static str = "https://{host}.sharepoint.com/_forms/default.aspx?wa=wsignin1.0";
-static GET_REQUEST_DIGEST_URL: &'static str = "https://{host}.sharepoint.com/_api/contextinfo";
+static GET_ACCESS_TOKEN_URL: &'static str = "https://{host}/_forms/default.aspx?wa=wsignin1.0";
+static GET_REQUEST_DIGEST_URL: &'static str = "https://{host}/_api/contextinfo";
 
 static GET_SECURITY_TOKEN_BODY_PAR: &'static str = r##"<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
       xmlns:a="http://www.w3.org/2005/08/addressing"
@@ -32,7 +32,7 @@ static GET_SECURITY_TOKEN_BODY_PAR: &'static str = r##"<s:Envelope xmlns:s="http
     <t:RequestSecurityToken xmlns:t="http://schemas.xmlsoap.org/ws/2005/02/trust">
       <wsp:AppliesTo xmlns:wsp="http://schemas.xmlsoap.org/ws/2004/09/policy">
         <a:EndpointReference>
-          <a:Address>{host}.sharepoint.com</a:Address>
+          <a:Address>{host}</a:Address>
         </a:EndpointReference>
       </wsp:AppliesTo>
       <t:KeyType>http://schemas.xmlsoap.org/ws/2005/05/identity/NoProofKey</t:KeyType>
@@ -109,7 +109,16 @@ fn parse_xml_envelope(body: String, _: Vec<HeaderItem>, _: Vec<String>) -> Optio
     Some(v)
 }
 
-pub fn get_security_token(host: String, user_name: String, password: String) -> String {
+fn host(site:Site) -> String {
+    println!("Parsing '{:?}'", site.parent);
+    let site_parsed : hyper::Uri = site.parent.parse().unwrap();   
+    let result = site_parsed.host().unwrap().to_string();
+    println!("Returning '{:?}'", result);
+    result
+}
+
+pub fn get_security_token(site: Site, user_name: String, password: String) -> String {
+    let host = host(site);
     let s = GET_SECURITY_TOKEN_BODY_PAR
         .replace("{user_name}", &user_name)
         .replace("{password}", &password)
@@ -139,7 +148,8 @@ fn parse_cookies(_: String, _: Vec<HeaderItem>, cookies: Vec<String>) -> Option<
     Some(res)
 }
 
-pub fn get_access_token_cookies(host: String, security_token: String) -> AccessTokenCookies {
+pub fn get_access_token_cookies(site: Site, security_token: String) -> AccessTokenCookies {
+    let host = host(site);
     let data = process(
         GET_ACCESS_TOKEN_URL.replace("{host}", &host),
         security_token,
@@ -184,9 +194,10 @@ fn parse_digest(
 }
 
 pub fn get_the_request_digest(
-    host: String,
+    site: Site,
     access_token_cookies: AccessTokenCookies,
 ) -> RequestDigest {
+    let host = host(site);
     let res: GetContextWebInformation = process(
         GET_REQUEST_DIGEST_URL.replace("{host}", &host),
         "".to_string(),
@@ -205,11 +216,14 @@ pub mod tests {
     use super::*;
     use std::env;
 
-    pub fn login_params() -> (String, String, String) {
+    pub fn login_params() -> (String, String, Site) {
         let login = env::var("RUST_USERNAME").unwrap();
         let password = env::var("RUST_PASSWORD").unwrap();
-        let host = env::var("RUST_HOST").unwrap();
-        (login, password, host)
+        let config_site = env::var("RUST_SITE").unwrap();
+        let site_url : &str = &config_site;
+        let site_parsed : hyper::Uri = site_url.parse().unwrap();
+        let site = Site{parent:site_parsed.to_string()};
+        (login, password, site)
     }
 
     use self::serde_json::Value;
@@ -221,23 +235,10 @@ pub mod tests {
     }
 
     #[test]
-    fn json_works() {
-        let _res = process(
-            "https://httpbin.org/post".to_string(),
-            "".to_string(),
-            None,
-            parse_json,
-            true,
-            None,
-            Method::Post,
-        );
-        //println!("Got '{:?}'", _res);
-    }
-    #[test]
     fn xml_works() {
-        let (user_name, password, host) = login_params();
+        let (user_name, password, site) = login_params();
         let _res = get_security_token(
-            host.to_string(),
+            site,
             user_name.to_string(),
             password.to_string(),
         );
@@ -245,42 +246,42 @@ pub mod tests {
     }
     #[test]
     fn get_access_token_cookies_works() {
-        let (user_name, password, host) = login_params();
+        let (user_name, password, site) = login_params();
         let security_token = get_security_token(
-            host.to_string(),
+            site.clone(),
             user_name.to_string(),
             password.to_string(),
         );
-        let access_token = get_access_token_cookies(host.to_string(), security_token);
+        let access_token = get_access_token_cookies(site, security_token);
         assert!(access_token.rt_fa.is_some());
         assert!(access_token.fed_auth.is_some());
     }
     #[test]
     fn get_the_request_digest_works() {
-        let (user_name, password, host) = login_params();
+        let (user_name, password, site) = login_params();
         let security_token = get_security_token(
-            host.to_string(),
+            site.clone(),
             user_name.to_string(),
             password.to_string(),
         );
         let digest = get_the_request_digest(
-            host.to_string(),
-            get_access_token_cookies(host.to_string(), security_token),
+            site.clone(),
+            get_access_token_cookies(site, security_token),
         );
         //println!("Digest '{:?}'", digest);
         assert!(digest.content.len() > 0);
     }
     #[test]
     fn get_the_list() {
-        let (user_name, password, host) = login_params();
+        let (user_name, password, site) = login_params();
         let security_token = get_security_token(
-            host.to_string(),
+            site.clone(),
             user_name.to_string(),
             password.to_string(),
         );
 
-        let access_token_cookies = get_access_token_cookies(host.to_string(), security_token);
-        let digest = get_the_request_digest(host.to_string(), access_token_cookies.clone());
+        let access_token_cookies = get_access_token_cookies(site.clone(), security_token);
+        let digest = get_the_request_digest(site, access_token_cookies.clone());
 
         println!(
             "Trying to get to '{}'",
