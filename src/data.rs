@@ -119,7 +119,7 @@ fn parse_typed_json<T>(body: String, _: Vec<HeaderItem>, _: Vec<String>) -> Opti
 where
     T: DeserializeOwned,
 {
-    //println!("JSON Parsing '{:?}'", body.to_owned());
+    println!("JSON Parsing '{:?}'", body.to_owned());
     let v: T = serde_json::from_str(&body).unwrap();
     Some(v)
 }
@@ -159,6 +159,8 @@ where
 
     let mut v: Value = serde_json::from_str(&body).unwrap();
     v["__metadata"] = json!({ "type": list_item_type } );
+
+    println!("Will send '{}'", v.to_string().to_owned());
 
     process(
         url,

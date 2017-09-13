@@ -10,6 +10,7 @@ use data::*;
 use super::*;
 
 use self::serde::de::DeserializeOwned;
+use self::serde::ser::Serialize;
 
 #[derive(Debug, Deserialize, Default)]
 pub struct List {
@@ -22,6 +23,11 @@ pub struct List {
 struct ListItemsContainer<T> {
     #[serde(rename = "value", default)]
     results: Vec<T>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ListItemType {
+    pub name: String,
 }
 
 static GET_LIST_URL: &'static str = "{site}/_api/web/lists/GetByTitle('{title}')";
@@ -43,12 +49,12 @@ pub fn get_list_by_title(
     )
 }
 
-pub fn get_list_default_item_type( list_name : String ) -> String {
+pub fn get_list_default_item_type( list_name : String ) -> ListItemType {
     let mut v: Vec<char> = list_name.chars().collect();
     v[0] = v[0].to_uppercase().nth(0).unwrap();
     let s2: String = v.into_iter().collect();
 
-    format!("{}{}{}", "SP.Data.", s2, "ListItem" )
+    ListItemType{name:format!("{}{}{}", "SP.Data.", s2, "ListItem" )}
 }
 
 
@@ -72,16 +78,35 @@ where
     res.unwrap().results
 }
 
-pub fn add_list_item_by_list_title(
-
-) {
-
+pub fn add_list_item_by_list_title<T>( 
+    title: String,
+    access_token_cookies: AccessTokenCookies,
+    digest: RequestDigest,
+    site: Site,
+    data : T, 
+    list_item_type : ListItemType,
+) -> T
+where
+    T: Serialize + DeserializeOwned + Default,
+ {
+    let res: Option<T> = post_data(
+        GET_LIST_ITEMS_URL
+            .replace("{title}", &title)
+            .replace("{site}", site.parent.to_string().as_str()),
+        access_token_cookies,
+        digest,
+        data,
+        list_item_type.name
+    );
+    //println!("res: '{:?}'", res);
+    res.unwrap()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::env;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
     fn get_list_by_title_works() {
@@ -106,6 +131,14 @@ mod tests {
         id: i32,
     }
 
+    #[derive(Debug, Deserialize, Default, Serialize)]
+    struct GenericListItemWithTitle {
+        //#[serde(rename = "Id", default)]
+        //id: i32,
+        #[serde(rename = "Title", default)]
+        title: String,
+    }
+
     #[test]
     fn get_list_items_by_title_works() {
         let (user_name, password, site) = auth::tests::login_params();
@@ -125,5 +158,36 @@ mod tests {
         println!("items: '{:?}'", items);
 
         assert!(items.len() > 0);
+    }
+
+    pub fn since_the_epoch() -> u64 {
+        let start = SystemTime::now();
+        let since_the_epoch = start
+            .duration_since(UNIX_EPOCH)
+            .expect("Time went backwards");
+        since_the_epoch.as_secs() * 1000 + since_the_epoch.subsec_nanos() as u64 / 1_000_000
+    }
+    
+    #[test]
+    fn create_new_list_item_by_title_works() {
+        let (user_name, password, site) = auth::tests::login_params();
+        let security_token = get_security_token(
+            site.clone(),
+            user_name.to_string(),
+            password.to_string(),
+        );
+
+        let new_item = GenericListItemWithTitle{title: format!("Test-{}", since_the_epoch()) };
+
+        let access_token_cookies = get_access_token_cookies(site.clone(), security_token);
+        let digest = get_the_request_digest(site.clone(), access_token_cookies.clone());
+        let title = env::var("RUST_TITLE").unwrap().to_string();
+
+        let item: GenericListItemWithTitle =
+            add_list_item_by_list_title(title.to_owned(), access_token_cookies, digest, site, new_item, get_list_default_item_type(title) );
+
+        println!("item: '{:?}'", item);
+
+        assert!(false);
     }
 }
