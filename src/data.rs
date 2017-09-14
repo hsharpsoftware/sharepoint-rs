@@ -81,8 +81,8 @@ where
         ));
         println!("digest:{}", digest);
 
-        req.headers_mut().set(XHttpMethod("MERGE".to_string()));
-        req.headers_mut().set(IfMatch("*".to_string()));
+        //req.headers_mut().set(XHttpMethod("MERGE".to_string()));
+        //req.headers_mut().set(IfMatch("*".to_string()));
     }
 
     let mut result: Option<T> = None;
@@ -167,7 +167,7 @@ where
     let body = serde_json::to_string(&data).unwrap();
 
     let mut v: Value = serde_json::from_str(&body).unwrap();
-    v["__metadata"] = json!({ "type": list_item_type } );
+    //v["__metadata"] = json!({ "type": list_item_type } );
 
     println!("Will send '{}' to {}", v.to_string().to_owned(), url);
 
