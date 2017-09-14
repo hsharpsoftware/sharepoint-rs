@@ -12,7 +12,7 @@ use hyper::{Method, Request};
 #[allow(unused_imports)]
 use super::*;
 
-use self::serde::de::{DeserializeOwned };
+use self::serde::de::DeserializeOwned;
 use self::serde::ser::Serialize;
 use hyper::header::{ContentLength, ContentType, SetCookie, Accept, qitem, Cookie};
 use hyper::mime;
@@ -61,7 +61,7 @@ where
         let rt_fa = atc.rt_fa.unwrap();
         let fed_auth = atc.fed_auth.unwrap();
         cookie.append("rtFa", rt_fa.to_owned());
-        cookie.append("FedAuth", fed_auth.to_owned() );
+        cookie.append("FedAuth", fed_auth.to_owned());
         println!("rtFa:{}", rt_fa);
         println!("FedAuth:{}", fed_auth);
         req.headers_mut().set(cookie);
@@ -72,13 +72,9 @@ where
         );
     }
     if x_request_digest.is_some() {
-        let digest = x_request_digest
-                .unwrap()
-                .content;
+        let digest = x_request_digest.unwrap().content;
 
-        req.headers_mut().set(XRequestDigest(
-                digest.to_owned(),
-        ));
+        req.headers_mut().set(XRequestDigest(digest.to_owned()));
         println!("digest:{}", digest);
 
         //req.headers_mut().set(XHttpMethod("MERGE".to_string()));
@@ -158,11 +154,11 @@ pub fn post_data<T>(
     url: String,
     access_token_cookies: AccessTokenCookies,
     digest: RequestDigest,
-    data : T,
-    list_item_type : String,
+    data: T,
+    list_item_type: String,
 ) -> Option<T>
 where
-    T: DeserializeOwned + Serialize
+    T: DeserializeOwned + Serialize,
 {
     let body = serde_json::to_string(&data).unwrap();
 

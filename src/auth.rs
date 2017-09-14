@@ -109,21 +109,21 @@ fn parse_xml_envelope(body: String, _: Vec<HeaderItem>, _: Vec<String>) -> Optio
     Some(v)
 }
 
-fn host(site:Site) -> String {
+fn host(site: Site) -> String {
     println!("Parsing '{:?}'", site.parent);
-    let site_parsed : hyper::Uri = site.parent.parse().unwrap();   
+    let site_parsed: hyper::Uri = site.parent.parse().unwrap();
     let result = site_parsed.host().unwrap().to_string();
     println!("Returning '{:?}'", result);
     result
 }
 
-fn host_and_path(site:Site) -> (String, String) {
+fn host_and_path(site: Site) -> (String, String) {
     println!("Parsing '{:?}'", site.parent);
-    let site_parsed : hyper::Uri = site.parent.parse().unwrap();   
+    let site_parsed: hyper::Uri = site.parent.parse().unwrap();
     let result = site_parsed.host().unwrap().to_string();
     let path = site_parsed.path().to_string();
     println!("Returning '{:?}' & '{:?}'", result, path);
-    ( result, path )
+    (result, path)
 }
 
 pub fn get_security_token(site: Site, user_name: String, password: String) -> String {
@@ -208,7 +208,10 @@ pub fn get_the_request_digest(
 ) -> RequestDigest {
     let (host, path) = host_and_path(site);
     let res: GetContextWebInformation = process(
-        GET_REQUEST_DIGEST_URL.replace("{host}", &host).replace("{path}", &path),
+        GET_REQUEST_DIGEST_URL.replace("{host}", &host).replace(
+            "{path}",
+            &path,
+        ),
         "".to_string(),
         Some(access_token_cookies),
         parse_digest,
@@ -229,9 +232,9 @@ pub mod tests {
         let login = env::var("RUST_USERNAME").unwrap();
         let password = env::var("RUST_PASSWORD").unwrap();
         let config_site = env::var("RUST_SITE").unwrap();
-        let site_url : &str = &config_site;
-        let site_parsed : hyper::Uri = site_url.parse().unwrap();
-        let site = Site{parent:site_parsed.to_string()};
+        let site_url: &str = &config_site;
+        let site_parsed: hyper::Uri = site_url.parse().unwrap();
+        let site = Site { parent: site_parsed.to_string() };
         (login, password, site)
     }
 
@@ -246,21 +249,14 @@ pub mod tests {
     #[test]
     fn xml_works() {
         let (user_name, password, site) = login_params();
-        let _res = get_security_token(
-            site,
-            user_name.to_string(),
-            password.to_string(),
-        );
+        let _res = get_security_token(site, user_name.to_string(), password.to_string());
         //println!("Got '{:?}'", _res);
     }
     #[test]
     fn get_access_token_cookies_works() {
         let (user_name, password, site) = login_params();
-        let security_token = get_security_token(
-            site.clone(),
-            user_name.to_string(),
-            password.to_string(),
-        );
+        let security_token =
+            get_security_token(site.clone(), user_name.to_string(), password.to_string());
         let access_token = get_access_token_cookies(site, security_token);
         assert!(access_token.rt_fa.is_some());
         assert!(access_token.fed_auth.is_some());
@@ -268,26 +264,18 @@ pub mod tests {
     #[test]
     fn get_the_request_digest_works() {
         let (user_name, password, site) = login_params();
-        let security_token = get_security_token(
-            site.clone(),
-            user_name.to_string(),
-            password.to_string(),
-        );
-        let digest = get_the_request_digest(
-            site.clone(),
-            get_access_token_cookies(site, security_token),
-        );
+        let security_token =
+            get_security_token(site.clone(), user_name.to_string(), password.to_string());
+        let digest =
+            get_the_request_digest(site.clone(), get_access_token_cookies(site, security_token));
         //println!("Digest '{:?}'", digest);
         assert!(digest.content.len() > 0);
     }
     #[test]
     fn get_the_list() {
         let (user_name, password, site) = login_params();
-        let security_token = get_security_token(
-            site.clone(),
-            user_name.to_string(),
-            password.to_string(),
-        );
+        let security_token =
+            get_security_token(site.clone(), user_name.to_string(), password.to_string());
 
         let access_token_cookies = get_access_token_cookies(site.clone(), security_token);
         let digest = get_the_request_digest(site, access_token_cookies.clone());
