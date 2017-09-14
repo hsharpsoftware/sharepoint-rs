@@ -19,6 +19,8 @@ use hyper::mime;
 use self::futures::{Future, Stream};
 
 header! { (XRequestDigest, "X-RequestDigest") => [String] }
+header! { (XHttpMethod, "X-Http-Method") => [String] }
+header! { (IfMatch, "If-Match") => [String] }
 
 #[derive(Debug, Deserialize, Default)]
 pub struct HeaderItem {
@@ -78,6 +80,9 @@ where
                 digest.to_owned(),
         ));
         println!("digest:{}", digest);
+
+        req.headers_mut().set(XHttpMethod("MERGE".to_string()));
+        req.headers_mut().set(IfMatch("*".to_string()));
     }
 
     let mut result: Option<T> = None;

@@ -9,7 +9,7 @@ use hyper::Method;
 
 static GET_SECURITY_TOKEN_URL: &'static str = "https://login.microsoftonline.com/extSTS.srf";
 static GET_ACCESS_TOKEN_URL: &'static str = "https://{host}/_forms/default.aspx?wa=wsignin1.0";
-static GET_REQUEST_DIGEST_URL: &'static str = "https://{host}/_api/contextinfo";
+static GET_REQUEST_DIGEST_URL: &'static str = "https://{host}/{path}/_api/contextinfo";
 
 static GET_SECURITY_TOKEN_BODY_PAR: &'static str = r##"<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
       xmlns:a="http://www.w3.org/2005/08/addressing"
@@ -117,6 +117,15 @@ fn host(site:Site) -> String {
     result
 }
 
+fn host_and_path(site:Site) -> (String, String) {
+    println!("Parsing '{:?}'", site.parent);
+    let site_parsed : hyper::Uri = site.parent.parse().unwrap();   
+    let result = site_parsed.host().unwrap().to_string();
+    let path = site_parsed.path().to_string();
+    println!("Returning '{:?}' & '{:?}'", result, path);
+    ( result, path )
+}
+
 pub fn get_security_token(site: Site, user_name: String, password: String) -> String {
     let host = host(site);
     let s = GET_SECURITY_TOKEN_BODY_PAR
@@ -197,9 +206,9 @@ pub fn get_the_request_digest(
     site: Site,
     access_token_cookies: AccessTokenCookies,
 ) -> RequestDigest {
-    let host = host(site);
+    let (host, path) = host_and_path(site);
     let res: GetContextWebInformation = process(
-        GET_REQUEST_DIGEST_URL.replace("{host}", &host),
+        GET_REQUEST_DIGEST_URL.replace("{host}", &host).replace("{path}", &path),
         "".to_string(),
         Some(access_token_cookies),
         parse_digest,
