@@ -83,16 +83,17 @@ where
     res.unwrap().results
 }
 
-pub fn add_list_item_by_list_title<T>(
+pub fn add_list_item_by_list_title<T,U>(
     title: String,
     access_token_cookies: AccessTokenCookies,
     digest: RequestDigest,
     site: Site,
-    data: T,
+    data: U,
     list_item_type: ListItemType,
 ) -> T
 where
-    T: Serialize + DeserializeOwned + Default,
+    T: DeserializeOwned + Default,
+    U: Serialize + Default,
 {
     let res: Option<T> = post_data(
         GET_LIST_ITEMS_URL.replace("{title}", &title).replace(
@@ -138,8 +139,14 @@ mod tests {
 
     #[derive(Debug, Deserialize, Default, Serialize)]
     struct GenericListItemWithTitle {
-        //#[serde(rename = "Id", default)]
-        //id: i32,
+        #[serde(rename = "Id", default)]
+        id: i32,
+        #[serde(rename = "Title", default)]
+        title: String,
+    }
+
+    #[derive(Debug, Deserialize, Default, Serialize)]
+    struct GenericListItemWithTitleForCreate {
         #[serde(rename = "Title", default)]
         title: String,
     }
@@ -176,7 +183,7 @@ mod tests {
         let security_token =
             get_security_token(site.clone(), user_name.to_string(), password.to_string());
 
-        let new_item = GenericListItemWithTitle { title: format!("Test-{}", since_the_epoch()) };
+        let new_item = GenericListItemWithTitleForCreate { title: format!("Test-{}", since_the_epoch()) };
 
         let access_token_cookies = get_access_token_cookies(site.clone(), security_token);
         let digest = get_the_request_digest(site.clone(), access_token_cookies.clone());

@@ -150,15 +150,16 @@ where
 
 use self::serde_json::Value;
 
-pub fn post_data<T>(
+pub fn post_data<T, U>(
     url: String,
     access_token_cookies: AccessTokenCookies,
     digest: RequestDigest,
-    data: T,
+    data: U,
     list_item_type: String,
 ) -> Option<T>
 where
-    T: DeserializeOwned + Serialize,
+    T: DeserializeOwned,
+    U: Serialize,
 {
     let body = serde_json::to_string(&data).unwrap();
 
