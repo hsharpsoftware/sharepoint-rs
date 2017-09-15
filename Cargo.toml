@@ -1,6 +1,6 @@
 [package]
 name = "sharepoint"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["David Podhola <david.podhola@hsharp.software>"]
 description = "Sharepoint client for Rust"
 repository = "https://github.com/hsharpsoftware/sharepoint-rs"
