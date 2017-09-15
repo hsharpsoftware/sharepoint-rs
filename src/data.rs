@@ -36,6 +36,7 @@ pub fn process<'a, T>(
     json: bool,
     x_request_digest: Option<RequestDigest>,
     method: Method,
+    use_merge : bool,
 ) -> Option<T>
 where
     T: serde::Deserialize<'a>,
@@ -76,9 +77,11 @@ where
 
         req.headers_mut().set(XRequestDigest(digest.to_owned()));
         println!("digest:{}", digest);
+    }
 
-        //req.headers_mut().set(XHttpMethod("MERGE".to_string()));
-        //req.headers_mut().set(IfMatch("*".to_string()));
+    if use_merge {
+        req.headers_mut().set(XHttpMethod("PATCH".to_string()));
+        req.headers_mut().set(IfMatch("*".to_string()));
     }
 
     let mut result: Option<T> = None;
@@ -129,6 +132,13 @@ where
     Some(v)
 }
 
+fn do_not_parse<T>(body: String, _: Vec<HeaderItem>, _: Vec<String>) -> Option<T>
+where
+    T: DeserializeOwned + Default,
+{
+    Some(Default::default())
+}
+
 pub fn get_data<T>(
     url: String,
     access_token_cookies: AccessTokenCookies,
@@ -145,6 +155,7 @@ where
         true,
         Some(digest),
         Method::Get,
+        false
     )
 }
 
@@ -156,15 +167,18 @@ pub fn post_data<T, U>(
     digest: RequestDigest,
     data: U,
     list_item_type: String,
+    use_merge: bool, 
 ) -> Option<T>
 where
-    T: DeserializeOwned,
+    T: DeserializeOwned + Default,
     U: Serialize,
 {
     let body = serde_json::to_string(&data).unwrap();
 
     let mut v: Value = serde_json::from_str(&body).unwrap();
-    //v["__metadata"] = json!({ "type": list_item_type } );
+    if use_merge {
+        //v["__metadata"] = json!({ "type": list_item_type } );
+    }
 
     println!("Will send '{}' to {}", v.to_string().to_owned(), url);
 
@@ -172,9 +186,10 @@ where
         url,
         v.to_string(),
         Some(access_token_cookies),
-        parse_typed_json,
+        if use_merge { do_not_parse } else { parse_typed_json },
         true,
         Some(digest),
         Method::Post,
+        use_merge
     )
 }

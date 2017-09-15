@@ -50,6 +50,7 @@ pub struct AccessTokenCookies {
     pub fed_auth: Option<String>,
 }
 
+#[derive(Clone)]
 pub struct RequestDigest {
     pub content: String,
 }
@@ -140,6 +141,7 @@ pub fn get_security_token(site: Site, user_name: String, password: String) -> St
         false,
         None,
         Method::Post,
+        false
     ).unwrap();
     res.body
         .request_security_token_response
@@ -167,6 +169,7 @@ pub fn get_access_token_cookies(site: Site, security_token: String) -> AccessTok
         false,
         None,
         Method::Post,
+        false
     ).unwrap();
     let mut res = AccessTokenCookies {
         rt_fa: None,
@@ -218,6 +221,7 @@ pub fn get_the_request_digest(
         false,
         None,
         Method::Post,
+        false,
     ).unwrap();
     RequestDigest { content: res.form_digest_value.content }
 }
@@ -293,6 +297,7 @@ pub mod tests {
             true,
             Some(digest),
             Method::Get,
+            false,
         );
     }
 }

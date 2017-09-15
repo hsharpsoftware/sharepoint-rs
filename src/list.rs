@@ -106,6 +106,36 @@ where
         digest,
         data,
         list_item_type.name,
+        false,
+    );
+    //println!("res: '{:?}'", res);
+    res.unwrap()
+}
+
+pub fn update_list_item_by_list_title<U>(
+    title: String,
+    access_token_cookies: AccessTokenCookies,
+    digest: RequestDigest,
+    site: Site,
+    data: U,
+    list_item_type: ListItemType,
+    id : i32,
+) -> ()
+where
+    U: Serialize + Default,
+{
+    let res: Option<()> = post_data(
+        format!("{}({})", GET_LIST_ITEMS_URL.replace("{title}", &title).replace(
+            "{site}",
+            site.parent
+                .to_string()
+                .as_str(),
+        ), id ),
+        access_token_cookies,
+        digest,
+        data,
+        list_item_type.name,
+        true,
     );
     //println!("res: '{:?}'", res);
     res.unwrap()
@@ -191,14 +221,26 @@ mod tests {
 
         let item: GenericListItemWithTitle = add_list_item_by_list_title(
             title.to_owned(),
-            access_token_cookies,
-            digest,
-            site,
+            access_token_cookies.clone(),
+            digest.clone(),
+            site.to_owned(),
             new_item,
-            get_list_default_item_type(title),
+            get_list_default_item_type(title.to_owned()),
         );
 
         println!("item: '{:?}'", item);
+        let item2 = GenericListItemWithTitle{ title: format!("{}-Updated", item.title), .. item };
+        let id = item2.id;
+
+        update_list_item_by_list_title(
+            title.to_owned(),
+            access_token_cookies,
+            digest,
+            site,
+            item2,
+            get_list_default_item_type(title),
+            id
+        );
 
         //assert!(false);
     }
