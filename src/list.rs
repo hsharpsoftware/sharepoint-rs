@@ -35,10 +35,11 @@ static GET_LIST_ITEMS_URL: &'static str = "{site}/_api/web/lists/GetByTitle('{ti
 
 pub fn get_list_by_title(
     title: String,
-    access_token_cookies: AccessTokenCookies,
-    digest: RequestDigest,
-    site: Site,
+    login : LoginContext
 ) -> Option<List> {
+    let access_token_cookies = login.access_token;
+    let digest = login.request_digest;
+    let site = login.site;
     get_data(
         GET_LIST_URL.replace("{title}", &title).replace(
             "{site}",
@@ -150,14 +151,10 @@ mod tests {
     #[test]
     fn get_list_by_title_works() {
         let (user_name, password, site) = auth::tests::login_params();
-        let security_token =
-            get_security_token(site.clone(), user_name.to_string(), password.to_string());
-
-        let access_token_cookies = get_access_token_cookies(site.clone(), security_token);
-        let digest = get_the_request_digest(site.clone(), access_token_cookies.clone());
+        let login = login( site.parent, user_name, password );
         let title = env::var("RUST_TITLE").unwrap().to_string();
 
-        let list = get_list_by_title(title, access_token_cookies, digest, site).unwrap();
+        let list = get_list_by_title(title, login).unwrap();
         println!("ID: {}", list.id);
     }
 
