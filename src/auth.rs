@@ -55,6 +55,13 @@ pub struct RequestDigest {
     pub content: String,
 }
 
+#[derive(Clone)]
+pub struct LoginContext {
+    pub access_token : AccessTokenCookies,
+    pub request_digest : RequestDigest,
+    pub site : Site,
+}
+
 use self::serde_xml_rs::deserialize;
 
 #[derive(Debug, Deserialize, Default)]
@@ -108,6 +115,21 @@ fn parse_xml_envelope(body: String, _: Vec<HeaderItem>, _: Vec<String>) -> Optio
     //println!("XML Parsing '{:?}'", body);
     let v: Envelope = deserialize(body.as_bytes()).unwrap();
     Some(v)
+}
+
+pub fn login( site : String, user_name : String, password : String ) -> LoginContext {
+    let site_url: &str = &site;
+    let site_parsed: hyper::Uri = site_url.parse().unwrap();
+    let site = Site { parent: site_parsed.to_string() };
+    let security_token =
+        get_security_token(site.clone(), user_name, password);
+    let access_token_cookies = get_access_token_cookies(site.clone(), security_token);
+    let digest = get_the_request_digest(site.clone(), access_token_cookies.clone());    
+    LoginContext{  
+        access_token : access_token_cookies,
+        request_digest : digest,
+        site : site,
+    }
 }
 
 fn host(site: Site) -> String {
