@@ -132,7 +132,7 @@ where
     Some(v)
 }
 
-fn do_not_parse<T>(body: String, _: Vec<HeaderItem>, _: Vec<String>) -> Option<T>
+fn do_not_parse<T>(_: String, _: Vec<HeaderItem>, _: Vec<String>) -> Option<T>
 where
     T: DeserializeOwned + Default,
 {
@@ -166,7 +166,6 @@ pub fn post_data<T, U>(
     access_token_cookies: AccessTokenCookies,
     digest: RequestDigest,
     data: U,
-    list_item_type: String,
     use_merge: bool, 
 ) -> Option<T>
 where
@@ -175,10 +174,7 @@ where
 {
     let body = serde_json::to_string(&data).unwrap();
 
-    let mut v: Value = serde_json::from_str(&body).unwrap();
-    if use_merge {
-        //v["__metadata"] = json!({ "type": list_item_type } );
-    }
+    let v: Value = serde_json::from_str(&body).unwrap();
 
     println!("Will send '{}' to {}", v.to_string().to_owned(), url);
 

@@ -35,7 +35,7 @@ static GET_LIST_ITEMS_URL: &'static str = "{site}/_api/web/lists/GetByTitle('{ti
 
 pub fn get_list_by_title(
     title: String,
-    login : LoginContext
+    login : LoginContext,
 ) -> Option<List> {
     let access_token_cookies = login.access_token;
     let digest = login.request_digest;
@@ -63,13 +63,15 @@ pub fn get_list_default_item_type(list_name: String) -> ListItemType {
 
 pub fn get_list_items_by_title<T>(
     title: String,
-    access_token_cookies: AccessTokenCookies,
-    digest: RequestDigest,
-    site: Site,
+    login : LoginContext,
 ) -> Vec<T>
 where
     T: DeserializeOwned + Default,
 {
+    let access_token_cookies = login.access_token;
+    let digest = login.request_digest;
+    let site = login.site;
+
     let res: Option<ListItemsContainer<T>> = get_data(
         GET_LIST_ITEMS_URL.replace("{title}", &title).replace(
             "{site}",
@@ -86,16 +88,17 @@ where
 
 pub fn add_list_item_by_list_title<T,U>(
     title: String,
-    access_token_cookies: AccessTokenCookies,
-    digest: RequestDigest,
-    site: Site,
+    login : LoginContext,
     data: U,
-    list_item_type: ListItemType,
 ) -> T
 where
     T: DeserializeOwned + Default,
     U: Serialize + Default,
 {
+    let access_token_cookies = login.access_token;
+    let digest = login.request_digest;
+    let site = login.site;
+
     let res: Option<T> = post_data(
         GET_LIST_ITEMS_URL.replace("{title}", &title).replace(
             "{site}",
@@ -106,7 +109,6 @@ where
         access_token_cookies,
         digest,
         data,
-        list_item_type.name,
         false,
     );
     //println!("res: '{:?}'", res);
@@ -115,16 +117,17 @@ where
 
 pub fn update_list_item_by_list_title<U>(
     title: String,
-    access_token_cookies: AccessTokenCookies,
-    digest: RequestDigest,
-    site: Site,
+    login : LoginContext,
     data: U,
-    list_item_type: ListItemType,
     id : i32,
 ) -> ()
 where
     U: Serialize + Default,
 {
+    let access_token_cookies = login.access_token;
+    let digest = login.request_digest;
+    let site = login.site;
+
     let res: Option<()> = post_data(
         format!("{}({})", GET_LIST_ITEMS_URL.replace("{title}", &title).replace(
             "{site}",
@@ -135,7 +138,6 @@ where
         access_token_cookies,
         digest,
         data,
-        list_item_type.name,
         true,
     );
     //println!("res: '{:?}'", res);
@@ -181,15 +183,11 @@ mod tests {
     #[test]
     fn get_list_items_by_title_works() {
         let (user_name, password, site) = auth::tests::login_params();
-        let security_token =
-            get_security_token(site.clone(), user_name.to_string(), password.to_string());
-
-        let access_token_cookies = get_access_token_cookies(site.clone(), security_token);
-        let digest = get_the_request_digest(site.clone(), access_token_cookies.clone());
+        let login = login( site.parent, user_name, password );
         let title = env::var("RUST_TITLE").unwrap().to_string();
 
         let items: Vec<GenericListItem> =
-            get_list_items_by_title(title, access_token_cookies, digest, site);
+            get_list_items_by_title(title, login);
 
         println!("items: '{:?}'", items);
 
@@ -207,22 +205,16 @@ mod tests {
     #[test]
     fn create_new_list_item_by_title_works() {
         let (user_name, password, site) = auth::tests::login_params();
-        let security_token =
-            get_security_token(site.clone(), user_name.to_string(), password.to_string());
 
         let new_item = GenericListItemWithTitleForCreate { title: format!("Test-{}", since_the_epoch()) };
 
-        let access_token_cookies = get_access_token_cookies(site.clone(), security_token);
-        let digest = get_the_request_digest(site.clone(), access_token_cookies.clone());
+        let login = login( site.parent, user_name, password );
         let title = env::var("RUST_TITLE").unwrap().to_string();
 
         let item: GenericListItemWithTitle = add_list_item_by_list_title(
             title.to_owned(),
-            access_token_cookies.clone(),
-            digest.clone(),
-            site.to_owned(),
+            login.clone(),
             new_item,
-            get_list_default_item_type(title.to_owned()),
         );
 
         println!("item: '{:?}'", item);
@@ -231,11 +223,8 @@ mod tests {
 
         update_list_item_by_list_title(
             title.to_owned(),
-            access_token_cookies,
-            digest,
-            site,
+            login.clone(),
             item2,
-            get_list_default_item_type(title),
             id
         );
 
